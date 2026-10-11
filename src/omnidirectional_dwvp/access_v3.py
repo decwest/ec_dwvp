@@ -9,6 +9,7 @@ import platform
 import sys
 import numpy as np
 from .access_studies import atomic_json, execute_trial, make_condition, numerical_hash, plan_conditions as plan_v2
+from .config import Config
 from .studies import ROOT, sha, code_hash, git_revision, cpu_model, write_csv
 
 
@@ -68,6 +69,14 @@ def plan_conditions(config, settings, seed, selected):
             parameter='response_distance', value=.33, seeds=seeds)
     for look in settings['fixed_lookaheads']:
         add('test5', 'c', rapid, replace(config, fixed_lookahead=look), methods, 'fixed_lookahead', look)
+    # Reuse the combined experiment's zero-noise rows as paired baselines.
+    levels = [(xy, 0.) for xy in settings['noise_xy_only_levels']]
+    levels += [(0., yaw) for yaw in settings['noise_yaw_only_levels']]
+    for xy, yaw in levels:
+        for response in settings['noise_responses']:
+            cfg = replace(config, fixed_lookahead=.11, response_distance=response,
+                          noise_xy=xy, noise_yaw=float(np.deg2rad(yaw)))
+            add('test5', 'b', offset, cfg, parameter='response_distance', value=response, seeds=seeds)
     return conditions
 
 
@@ -80,7 +89,7 @@ def run(study, output, config, settings, seed=0, force=False, config_path=None, 
         raise ValueError('output must be a real directory')
     conditions = plan_conditions(config, settings, seed, selected)
     numerical_source = numerical_hash()
-    manifest = dict(schema_version=1, planner_version='access_v3.1', suite='access_v3', study=study,
+    manifest = dict(schema_version=1, planner_version='access_v3.2', suite='access_v3', study=study,
                     source_sha256=code_hash(), numerical_source_sha256=numerical_source,
                     git_revision=git_revision(), python=sys.version, numpy=np.__version__, platform=platform.platform(),
                     cpu_model=cpu_model(), workers=workers, seed=seed, config=asdict(config), settings=settings,
@@ -99,6 +108,10 @@ def run(study, output, config, settings, seed=0, force=False, config_path=None, 
         nonlocal last_log
         row, spec, cached = result
         row.update(condition_id=sha(c), response_distance_m=c['config']['response_distance'])
+        cfg = Config(**c['config'])
+        if c['test'] in ('test1', 'test2') or (c['test']=='test5' and c['part']=='b'):
+            distance = cfg.response_distance if cfg.response_distance is not None else cfg.fixed_lookahead
+            row['tau_y_s'] = distance / cfg.translation_speed if distance is not None else None
         manifest['cache_hits'] = manifest.get('cache_hits', 0) + int(cached)
         rows.append(row)
         manifest['trials'].append(dict(condition_id=row['condition_id'], condition=c, spec=spec, summary=row))

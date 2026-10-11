@@ -1,19 +1,19 @@
 {
   "status": "passed",
-  "conditions": 2641,
-  "distinct_trajectories": 2508,
-  "command_cycles_replayed": 15331,
-  "noise_groups": 120,
+  "conditions": 3601,
+  "distinct_trajectories": 3468,
+  "command_cycles_replayed": 23293,
+  "noise_groups": 168,
   "desired_vector_fixture_cases": 192,
-  "required_figure_pairs": 40,
-  "figure_pairs": 79,
+  "required_figure_pairs": 42,
+  "figure_pairs": 81,
   "v2_parity": {
     "available": true,
     "compared_conditions": 136,
     "maximum_absolute_difference": 0.0
   },
   "protected_v2_files_unchanged": 17251,
-  "source_sha256": "a34aaae8e3959eec72b2c6e77e5401f9d91964e19d2d455fd248c4650ce01544",
-  "numerical_source_sha256": "ba5ca1497f1f1186d3f30071900689021e2086834bc2d10d94fac51999522270",
-  "wall_time_s": 98.32198391202837
+  "source_sha256": "d4b5f9684eb2e128c14fdeba563ad3c72004751f97b6bc675e5c01e6d0a2bfe6",
+  "numerical_source_sha256": "aa98e75c1f01eb1ae0bf11418d138b39f43e6b5978e80fdfd3eafc38006b9877",
+  "wall_time_s": 147.01848763797898
 }

@@ -1,5 +1,5 @@
 """Response law, portable fixtures and versioned study coverage."""
-from dataclasses import replace
+from dataclasses import asdict, replace
 import json
 import math
 from pathlib import Path
@@ -14,7 +14,7 @@ from omnidirectional_dwvp.paths import straight_path, arc_path
 from omnidirectional_dwvp.simulation import simulate
 from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
 from omnidirectional_dwvp.access_v3_metrics import fitted_time_constant
-from omnidirectional_dwvp.access_v3_outputs import recovery_summary
+from omnidirectional_dwvp.access_v3_outputs import recovery_summary, yaw_ratios
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,6 +29,30 @@ def profile():
 def test_response_distance_validation(value):
     with pytest.raises(ValueError):
         Config(response_distance=value)
+
+
+@pytest.mark.parametrize('value', [0, -.1, float('nan'), float('inf')])
+def test_response_time_validation(value):
+    with pytest.raises(ValueError, match='response time'):
+        Config(response_time=value)
+
+
+def test_response_time_normalization_and_serialization():
+    cfg = Config(response_time=1.5, vp_translation_speed=.22, fixed_lookahead=.11)
+    assert cfg.response_distance == .33
+    assert Config(**asdict(cfg)) == cfg
+    assert replace(cfg, noise_xy=.01).response_distance == .33
+    assert Config(response_time=1.5, vp_translation_speed=.1).response_distance == pytest.approx(.15)
+    assert Config(response_time=.5).response_distance == .11
+    with pytest.raises(ValueError, match='only one'):
+        Config(response_distance=.33, response_time=1.5)
+    with pytest.raises(ValueError, match='positive translation speed'):
+        Config(response_time=1.5, vp_translation_speed=0.)
+    path = straight_path(1.)
+    a = simulate(path, 'dwvp', cfg, initial_pose=[0,.2,0])
+    b = simulate(path, 'dwvp', Config(response_distance=.33, vp_translation_speed=.22, fixed_lookahead=.11), initial_pose=[0,.2,0])
+    for key in a.arrays:
+        np.testing.assert_array_equal(a.arrays[key], b.arrays[key])
 
 
 def old_desired_vector(pose,target,config):
@@ -147,7 +171,7 @@ def test_v3_grid_and_noise_seeds():
     cfg,settings=profile()
     rows=plan_conditions(cfg,settings,0,selected_studies('all'))
     counts={test:sum(c['test']==test for c in rows) for test in selected_studies('all')}
-    assert counts==dict(test1=30,test2=30,test3=132,test4=4,test5=2424)
+    assert counts==dict(test1=30,test2=30,test3=132,test4=4,test5=3384)
     assert not any(c['method']=='vp_scaled_accel' for c in rows)
     for c in rows:
         if c['test'] in ('test3','test4'):
@@ -157,8 +181,15 @@ def test_v3_grid_and_noise_seeds():
     for c in noise:
         key=json.dumps({k:v for k,v in c.items() if k!='seed'},sort_keys=True)
         groups.setdefault(key,[]).append(c['seed'])
-    assert len(groups)==120
+    assert len(groups)==168
     assert all(v==list(range(20)) for v in groups.values())
+    decomposition=[c for c in noise if bool(c['config']['noise_xy']) != bool(c['config']['noise_yaw'])]
+    assert len(decomposition)==960
+    assert all(c['method']=='dwvp' and c['config']['fixed_lookahead']==.11 for c in decomposition)
+    for xy,yaw in ([(v,0.) for v in (.002,.005,.01,.02)] + [(0.,math.radians(v)) for v in (.1,.2,.5,1.)]):
+        subset=[c for c in decomposition if (c['config']['noise_xy'],c['config']['noise_yaw'])==(xy,yaw)]
+        assert len(subset)==120
+        assert {c['config']['response_distance'] for c in subset}=={None,.165,.22,.33,.44,.60}
 
 
 def test_arc_path_limits_and_endpoint():
@@ -175,8 +206,18 @@ def test_noise_recovery_requires_all_seeds():
     base=dict(scenario='offset',parameter='response_distance',noise_yaw_deg=0.,n=20,success_count=20,travel_time_s_n=20)
     rows=[dict(base,value=d,noise_xy_m=xy,travel_time_s_mean=time) for d,xy,time in [( .165,0,20),(.33,0,22),(.165,.01,21),(.33,.01,23)]]
     rows[2].update(success_count=19,travel_time_s_n=19)
-    recovered=recovery_summary(rows,Config())
+    recovered=recovery_summary(rows,Config(), 'xy_only')
     assert next(r for r in recovered if r['noise_xy_m']==.01)['minimum_distance_m']==.33
+
+
+def test_noise_components_use_their_own_paired_baselines():
+    base=dict(scenario='offset',parameter='response_distance',n=20,success_count=20,travel_time_s_n=20)
+    rows=[dict(base,value=d,tau_y_s=d/.22,noise_xy_m=xy,noise_yaw_deg=yaw,travel_time_s_mean=time)
+          for d,xy,yaw,time in [(.165,0,0,20),(.33,0,0,30),(.165,.01,.5,24),(.33,.01,.5,32),
+                               (.165,.01,0,21),(.33,.01,0,31),(.165,0,.5,24),(.33,0,.5,33)]]
+    assert recovery_summary(rows,Config())[-1]['minimum_distance_m']==.33
+    assert recovery_summary(rows,Config(),'xy_only')[-1]['minimum_distance_m']==.165
+    assert [r['travel_time_ratio'] for r in yaw_ratios(rows)]==[1.2,1.1]
 
 
 def test_chord_length_response_matches_original_on_interior_projections():

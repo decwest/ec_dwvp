@@ -1,5 +1,5 @@
 """Explicit experiment settings; adapted from dwpp_python's frozen config pattern."""
-from dataclasses import asdict, dataclass
+from dataclasses import InitVar, asdict, dataclass
 import math
 import numpy as np
 
@@ -24,6 +24,7 @@ class Config:
     lookahead_time: float = 1.5
     fixed_lookahead: float | None = None
     response_distance: float | None = None
+    response_time: InitVar[float | None] = None
     orientation_time_weight: float = 1.0
     min_orientation_time: float = 0.20
     goal_xy: float = 0.02
@@ -40,7 +41,17 @@ class Config:
     noise_xy: float = 0.0
     noise_yaw: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self, response_time):
+        # Normalize the alternative input once, retaining distance as the stored
+        # parameter (including asdict/replace and saved simulation inputs).
+        if response_time is not None:
+            if self.response_distance is not None:
+                raise ValueError("set only one of response_distance and response_time")
+            if not math.isfinite(response_time) or response_time <= 0:
+                raise ValueError("response time must be finite and positive")
+            if self.translation_speed <= 0:
+                raise ValueError("response time requires positive translation speed")
+            object.__setattr__(self, 'response_distance', response_time * self.translation_speed)
         for name, value in asdict(self).items():
             if value is not None and not isinstance(value, bool) and not math.isfinite(value):
                 raise ValueError(f"{name} must be finite")

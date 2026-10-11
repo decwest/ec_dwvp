@@ -10,7 +10,7 @@ import numpy as np
 from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
 from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
 from omnidirectional_dwvp.access_v3_metrics import extra_metrics
-from omnidirectional_dwvp.access_v3_outputs import noise_summary, recovery_summary, parity, report
+from omnidirectional_dwvp.access_v3_outputs import noise_summary, recovery_summary, yaw_ratios, parity, report
 from omnidirectional_dwvp.access_metrics import evaluate
 from omnidirectional_dwvp.config import Config
 from omnidirectional_dwvp.controller import compute_command, preview_target, desired_vector
@@ -23,7 +23,9 @@ from validate_access_v2 import validate_goal_and_settling
 
 def csv_matches(path, expected):
     with path.open() as stream:
-        actual=list(csv.DictReader(stream))
+        reader=csv.DictReader(stream)
+        actual=list(reader)
+        assert reader.fieldnames==list(dict.fromkeys(k for row in expected for k in row)),path
     assert len(actual)==len(expected),path
     for actual_row,expected_row in zip(actual,expected):
         assert all(v==('' if expected_row.get(k) is None else str(expected_row[k])) for k,v in actual_row.items()),path
@@ -35,7 +37,7 @@ def validate(root,study='all'):
     manifest_path=root/('manifest.json' if study=='all' else f'manifest_{study}.json')
     manifest=json.loads(manifest_path.read_text())
     assert manifest['complete'] and manifest['suite']=='access_v3'
-    assert manifest['planner_version']=='access_v3.1'
+    assert manifest['planner_version']=='access_v3.2'
     assert manifest['source_sha256']==code_hash()
     assert manifest['numerical_source_sha256']==numerical_hash()
     assert manifest['dependency_lock_sha256']==hashlib.sha256((ROOT/'uv.lock').read_bytes()).hexdigest()
@@ -53,6 +55,10 @@ def validate(root,study='all'):
     replays=0
     for trial in manifest['trials']:
         row,spec=trial['summary'],trial['spec']
+        config=Config(**spec['config'])
+        if row['test'] in ('test1','test2') or (row['test']=='test5' and row['part']=='b'):
+            distance=config.response_distance if config.response_distance is not None else config.fixed_lookahead
+            assert row['tau_y_s']==(distance/config.translation_speed if distance is not None else None)
         identity=row['trial_id']
         assert sha(spec)==identity
         assert sha(trial['condition'])==row['condition_id']
@@ -115,7 +121,13 @@ def validate(root,study='all'):
     if grouped:
         csv_matches(root/'test5/noise_summary.csv',grouped)
         csv_matches(root/'test5/travel_time_recovery.csv',recovery)
+        csv_matches(root/'test5/travel_time_recovery_xy_only.csv',recovery_summary(grouped,cfg,'xy_only'))
+        csv_matches(root/'test5/yaw_only_ratios.csv',yaw_ratios(grouped))
         assert all(r['n']==manifest['settings']['noise_seeds'] for r in grouped)
+        for group in grouped:
+            seeds=[r['seed'] for r in rows if r['test']=='test5' and r['part']=='b' and
+                   all(r.get(k)==group[k] for k in ('scenario','method','parameter','value','noise_xy_m','noise_yaw_deg'))]
+            assert sorted(seeds)==list(range(manifest['seed'],manifest['seed']+manifest['settings']['noise_seeds']))
     for method,match in manifest.get('time_matches',{}).items():
         best=next(r for r in rows if r['trial_id']==match['best_trial_id'])
         assert best['method']==method and best['value']==match['best_scale']
@@ -136,7 +148,7 @@ def validate(root,study='all'):
     if 'test4' in selected:
         expected_stems += ['test4/test4_'+s for s in ('scene','cost0_approach1_distance_speed','cost1_approach1_distance_speed')]
     if 'test5' in selected:
-        expected_stems += ['test5/test5_'+s for s in ('noise_travel_time_vs_response','noise_travel_time_vs_lookahead','noise_orientation','orientation_vs_lookahead')]
+        expected_stems += ['test5/test5_'+s for s in ('noise_travel_time_vs_response','noise_travel_time_vs_response_xy_only','noise_travel_time_vs_response_yaw_only','noise_travel_time_vs_lookahead','noise_orientation','orientation_vs_lookahead')]
     from matplotlib.image import imread
     for stem in expected_stems:
         pdf=(root/(stem+'.pdf')).read_bytes()

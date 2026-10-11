@@ -63,6 +63,8 @@ study:
   cost_gains: [0.25, 0.5, 0.75, 1.0]
   approach_distances: [0.1, 0.3, 0.6, 1.0]
   noise_levels: [[0.0, 0.0], [0.002, 0.1], [0.005, 0.2], [0.01, 0.5], [0.02, 1.0]]
+  noise_xy_only_levels: [0.002, 0.005, 0.01, 0.02]
+  noise_yaw_only_levels: [0.1, 0.2, 0.5, 1.0]  # degrees
   noise_seeds: 20
   match_min_scale: 0.1
   match_iterations: 20

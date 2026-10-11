@@ -404,7 +404,14 @@ A positive response distance `D_y` changes only the desired translation directio
 closest path segment and `c_hat` points from that segment projection to the
 unchanged preview target. Rotation into the body frame and translation magnitude
 are unchanged; the angular time rule still uses the robot-to-preview distance.
-The straight-path small-error prediction is `tau = D_y / v`. The same compensated
+The presented straight-path small-error time constant is `tau_y = D_y / v_des`,
+where `v_des = translation_speed = 0.22 m/s` in this profile.
+`response_distance` remains the stored implementation parameter; the alternative
+input `response_time: 1.5` (seconds) sets `response_distance` to 0.33 m.
+Both inputs must be finite and positive when set, and setting both raises
+`ValueError`; a time input also requires positive translation speed.
+`response_time` is initialization-only, so saved configurations and replacements
+retain the normalized distance. The same compensated
 demand is available to all omnidirectional VP baselines.
 
 The tangent fallback covers coincident projection/target points and a preview
@@ -421,8 +428,8 @@ qualifications, the correction to the brief, telemetry, and the generated
 | `test2` | 30 | Orientation preview (18), CCW radius-1 m arc (12) |
 | `test3` | 132 | v2 Test 2 constraints, excluding `vp_scaled_accel` |
 | `test4` | 4 | v2 Test 3 obstacle regulation |
-| `test5` | 2424 + search | 2400 noisy trials (20 seeds per condition), 24 rapid-ramp preview trials, and the unchanged v2 travel-time matching search |
-| `all` | 2620 + search | All five studies |
+| `test5` | 3384 + search | 2400 original noise trials, 960 position-only/yaw-only trials (20 seeds per condition), 24 rapid-ramp preview trials, and the unchanged v2 travel-time matching search |
+| `all` | 3580 + search | All five studies |
 
 The v3 profile keeps v2's demand at 0.22 m/s, nominal box-speed cap, 0.75 s adaptive
 preview bounded to 0.11–0.33 m, and 30 Hz control. The complete study grid is in
@@ -445,3 +452,14 @@ v2 parity evidence. The v3 validator compares all 136 Test 3/4 conditions agains
 saved v2 arrays and common metrics without modifying v2 files. It also checks
 coverage, true-pose errors, command constraints, goal/settling definitions,
 response-rule counts, portable fixtures, noise aggregates and rendered assets.
+
+Test 1, Test 2, and Test 5(b) summaries add `tau_y_s` beside `response_distance_m`;
+fixed-preview base rows use the small-error prediction `L / v_des`, while adaptive
+base rows leave it empty. Test 5(b) keeps the original combined-noise results and
+adds position-only noise (0.002, 0.005, 0.01, 0.02 m) and yaw-only noise (0.1, 0.2,
+0.5, 1 degree), each at `L=0.11 m` and `D_y` in {base, 0.165, 0.22, 0.33, 0.44,
+0.60 m}. The response figures use `tau_y` with a separate base panel;
+`travel_time_recovery_xy_only.csv` records the smallest explicit distance within
+10% of its own noise-free mean (all 20 seeds must succeed), and
+`yaw_only_ratios.csv` records the mean travel-time ratios to each setting's own
+noise-free value. See `REPORT.md` for the complete tables and current validation.

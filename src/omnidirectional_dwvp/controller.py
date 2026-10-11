@@ -5,6 +5,7 @@ import numpy as np
 from .config import Config
 from .dwpp import optimal_velocity_in_window
 from .geometry import wrap, surface_distance
+from .metrics import project_reference, segment_tangents
 from .solver import calc_ray_box_intersection_alpha_range, calc_closest_alpha_to_box_from_ray
 
 
@@ -34,17 +35,51 @@ def regulated_box(lower, upper, cap, config):
     return regulated_lower, regulated_upper
 
 
-def desired_vector(pose, target, config):
+def response_direction(pose, target, path, response_distance, goal_region=False):
+    """Map-frame direction and active response rule; see docs/desired_velocity.md."""
+    reference, _, _, segment, _ = project_reference(np.asarray(pose)[None, :], path)
+    tangent = segment_tangents(path)[segment[0]]
+    normal = np.array([-tangent[1], tangent[0]])
+    error = float(normal @ (pose[:2] - reference[0, :2]))
+    chord = target[:2] - reference[0, :2]
+    length = float(np.linalg.norm(chord))
+    nearest_pose = int(np.argmin(np.sum((path[:, :2] - pose[:2])**2, axis=1)))
+    # A sampled nearest pose need not equal the continuous projection: the
+    # resulting tiny chord can point backward. No forward preview uses tangent.
+    tangent_preview = (not goal_region and np.array_equal(target, path[nearest_pose]))
+    if goal_region and length < 1e-9:
+        direction = target[:2] - pose[:2]
+        rule = 'goal'
+    else:
+        effective = min(response_distance, length) if goal_region else response_distance
+        chord_direction = tangent if length < 1e-9 or tangent_preview else chord / length
+        direction = chord_direction - (error / effective) * normal
+        rule = 'goal' if goal_region else 'tangent' if length < 1e-9 or tangent_preview else 'chord'
+    norm = float(np.linalg.norm(direction))
+    return (np.zeros(2) if norm <= 1e-12 else direction / norm), rule
+
+
+def desired_vector(pose, target, config, path=None, *, goal_region=False, return_rule=False):
     delta = target[:2] - pose[:2]
     c, s = math.cos(pose[2]), math.sin(pose[2])
     body = np.array([c * delta[0] + s * delta[1], -s * delta[0] + c * delta[1]])
     distance = float(np.linalg.norm(body))
     speed = config.translation_speed
     translation = np.zeros(2) if distance <= 1e-6 else speed * body / distance
+    rule = None
+    if config.response_distance is not None:
+        if path is None:
+            raise ValueError('response_distance requires path context')
+        direction, rule = response_direction(pose, target, path, config.response_distance, goal_region)
+        # Preserve the old zero-distance threshold for the goal point fallback.
+        if not (goal_region and distance <= 1e-6):
+            translation = speed * np.array([c * direction[0] + s * direction[1],
+                                           -s * direction[0] + c * direction[1]])
     time = config.min_orientation_time
     if speed > 1e-12:
         time = max(time, config.orientation_time_weight * distance / speed)
-    return np.r_[translation, wrap(target[2] - pose[2]) / time]
+    desired = np.r_[translation, wrap(target[2] - pose[2]) / time]
+    return (desired, rule) if return_rule else desired
 
 
 def ray_command(desired, lower, upper, prefer_large_alpha):
@@ -101,11 +136,11 @@ class Command:
     nearest: int
     mode: str
     obstacle_distance: float
+    response_rule: str | None = None
 
 
-def compute_command(pose, current, path, arc, method, config, obstacles=()):
-    if method not in {"vp", "vp_scaled", "vp_scaled_accel", "dwvp", "dwpp", "rpp"}:
-        raise ValueError(f"unknown controller: {method}")
+def preview_target(pose, current, path, config):
+    """Unchanged Humble RPP preview; goal region means no outer pose exists."""
     nearest = int(np.argmin(np.sum((path[:, :2] - pose[:2])**2, axis=1)))
     lookahead = config.fixed_lookahead
     if lookahead is None:
@@ -126,7 +161,22 @@ def compute_command(pose, current, path, arc, method, config, obstacles=()):
         if a > 1e-20:
             t = float(np.clip((-b + math.sqrt(max(0., b*b - 4*a*c))) / (2*a), 0., 1.))
             target[:2] = pose[:2] + start + t * segment
-    desired = desired_vector(pose, target, config)
+    return target, lookahead, nearest, not len(outer)
+
+
+def compute_command(pose, current, path, arc, method, config, obstacles=()):
+    if method not in {"vp", "vp_scaled", "vp_scaled_accel", "dwvp", "dwpp", "rpp"}:
+        raise ValueError(f"unknown controller: {method}")
+    target, lookahead, nearest, goal_region = preview_target(pose, current, path, config)
+    response_rule = None
+    if config.response_distance is not None and method not in ('dwpp', 'rpp'):
+        desired, response_rule = desired_vector(pose, target, config, path,
+                                               goal_region=goal_region, return_rule=True)
+    elif method in ('dwpp', 'rpp') and config.response_distance is not None:
+        # The differential-drive branches replace this demand below.
+        desired = np.zeros(3)
+    else:
+        desired = desired_vector(pose, target, config)
     cap, obstacle_distance = speed_cap(pose, path, arc, nearest, config, obstacles)
     lower, upper = dynamic_box(current, config)
     lower, upper = regulated_box(lower, upper, cap, config)
@@ -142,6 +192,7 @@ def compute_command(pose, current, path, arc, method, config, obstacles=()):
         desired = np.array([0.0, 0.0, target_w])
         command = np.clip(desired, lower, upper)
         mode = "terminal"
+        response_rule = None
     elif method in ("dwpp", "rpp"):
         delta = target[:2] - pose[:2]
         lateral = -math.sin(pose[2]) * delta[0] + math.cos(pose[2]) * delta[1]
@@ -174,7 +225,7 @@ def compute_command(pose, current, path, arc, method, config, obstacles=()):
         mode = "scaled_acceleration" if method == "vp_scaled_accel" else "scaled_velocity"
     else:
         command, mode = ray_command(desired, lower, upper, True)
-    return Command(desired, command, lower, upper, cap, lookahead, nearest, mode, obstacle_distance)
+    return Command(desired, command, lower, upper, cap, lookahead, nearest, mode, obstacle_distance, response_rule)
 
 
 def terminal_heading(path):

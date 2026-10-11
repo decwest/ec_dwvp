@@ -1,0 +1,29 @@
+Validated 250 distinct trajectories
+Validated 500 distinct trajectories
+Validated 750 distinct trajectories
+Validated 1000 distinct trajectories
+Validated 1250 distinct trajectories
+Validated 1500 distinct trajectories
+Validated 1750 distinct trajectories
+Validated 2000 distinct trajectories
+Validated 2250 distinct trajectories
+Validated 2500 distinct trajectories
+{
+  "status": "passed",
+  "conditions": 2641,
+  "distinct_trajectories": 2508,
+  "command_cycles_replayed": 15331,
+  "noise_groups": 120,
+  "desired_vector_fixture_cases": 192,
+  "required_figure_pairs": 40,
+  "figure_pairs": 79,
+  "v2_parity": {
+    "available": true,
+    "compared_conditions": 136,
+    "maximum_absolute_difference": 0.0
+  },
+  "protected_v2_files_unchanged": 17251,
+  "source_sha256": "a34aaae8e3959eec72b2c6e77e5401f9d91964e19d2d455fd248c4650ce01544",
+  "numerical_source_sha256": "ba5ca1497f1f1186d3f30071900689021e2086834bc2d10d94fac51999522270",
+  "wall_time_s": 98.32198391202837
+}

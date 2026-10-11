@@ -11,7 +11,7 @@ import traceback
 import numpy as np
 from .config import Config
 from .geometry import Obstacle
-from .paths import straight_path, orientation_ramp_path
+from .paths import straight_path, orientation_ramp_path, arc_path
 from .simulation import Result, simulate
 from .access_metrics import evaluate, aggregate
 from .studies import ROOT, code_hash, sha, git_revision, cpu_model, write_csv
@@ -25,7 +25,7 @@ def atomic_json(path, value):
 
 def numerical_hash():
     names = ('config.py', 'controller.py', 'dwpp.py', 'geometry.py', 'solver.py',
-             'paths.py', 'simulation.py', 'metrics.py', 'access_metrics.py')
+             'paths.py', 'simulation.py', 'metrics.py', 'access_metrics.py', 'access_v3_metrics.py')
     return sha({n: hashlib.sha256((ROOT / 'src/omnidirectional_dwvp' / n).read_bytes()).hexdigest() for n in names})
 
 
@@ -124,6 +124,8 @@ def execute_trial(condition, output, numerical_source_hash, force=False, reuse=N
     scene = condition['scenario']
     path = (orientation_ramp_path(scene['transition_length'], condition['path_length'], condition['path_spacing'], condition['ramp_start'])
             if scene['kind']=='ramp' else straight_path(condition['path_length'], condition['path_spacing']))
+    if scene['kind'] == 'arc':
+        path = arc_path(scene['radius'], scene['length'], condition['path_spacing'])
     initial = [0., scene.get('offset', 0.), 0.]
     obstacles = tuple(Obstacle(*o) for o in condition['obstacles'])
     spec = dict(method=condition['method'], config=asdict(cfg), seed=condition['seed'], initial_pose=initial,
@@ -160,6 +162,9 @@ def execute_trial(condition, output, numerical_source_hash, force=False, reuse=N
             if reused is None:
                 result = simulate(path, condition['method'], cfg, obstacles, condition['seed'], initial_pose=initial)
             metrics = evaluate(result, cfg, scene, initial, condition['evaluation_end'], condition['ramp_start'])
+            if condition.get('suite') == 'access_v3':
+                from .access_v3_metrics import extra_metrics
+                metrics.update(extra_metrics(result, cfg, scene))
             trajectory_temp = directory / f'trajectory.{os.getpid()}.npz'
             if reused is None:
                 np.savez_compressed(trajectory_temp, **result.arrays)

@@ -4,7 +4,7 @@ from time import perf_counter_ns
 import math
 import numpy as np
 from .config import Config
-from .metrics import project_reference
+from .metrics import project_reference, signed_lateral_errors
 from .controller import compute_command, dynamic_box, terminal_heading
 from .geometry import integrate, wrap, surface_distance, swept_clearance
 
@@ -38,6 +38,7 @@ def simulate(path, method="dwvp", config=Config(), obstacles=(), seed=0, initial
     rng = np.random.default_rng(seed)
     poses, applied, demands, commands, boxes, caps, looks, durations, modes, clearances = [pose.copy()], [], [], [], [], [], [], [], [], []
     reached = False
+    response_rules = []
     first_reach = None
     physical_violation, acceleration_violation, demand_violation = [], [], []
     mode_code = {"clipping": 0, "intersection": 1, "projection": 2, "terminal": 3, "zero": 4,
@@ -72,6 +73,7 @@ def simulate(path, method="dwvp", config=Config(), obstacles=(), seed=0, initial
         caps.append(output.speed_cap)
         looks.append(output.lookahead)
         modes.append(mode_code[output.mode])
+        response_rules.append({None: 0, 'chord': 1, 'tangent': 2, 'goal': 3}[output.response_rule])
         current, pose = accepted, next_pose
     positions = np.asarray(poses)
     applied = np.asarray(applied).reshape((-1, 3))
@@ -87,6 +89,8 @@ def simulate(path, method="dwvp", config=Config(), obstacles=(), seed=0, initial
                   clearance=np.asarray(clearances), direction_angle_deg=angle,
                   position_errors=errors, yaw_errors=yaw_errors, reference_poses=reference,
                   reference_segment=reference_segment, reference_fraction=reference_fraction)
+    arrays['response_rules'] = np.asarray(response_rules, dtype=np.int8)
+    arrays['signed_lateral_errors'] = signed_lateral_errors(positions, path, reference, reference_segment)
     finite_angle = angle[np.isfinite(angle)]
     metrics = dict(success=reached, timeout=not reached, steps=len(applied), duration_s=len(applied)*config.dt,
                    first_goal_time_s=first_reach, travel_time_s=len(applied)*config.dt if reached else None,
@@ -111,6 +115,8 @@ def simulate(path, method="dwvp", config=Config(), obstacles=(), seed=0, initial
     if obstacles and len(applied):
         near=np.array([surface_distance(p[:2], obstacles) < config.cost_scaling_dist for p in positions[:-1]])
         if near.any(): metrics["mean_near_obstacle_speed_m_s"] = float(np.mean(np.linalg.norm(applied[near,:2],axis=1)))
+    for code, rule in enumerate(('inactive', 'chord', 'tangent', 'goal')):
+        metrics[f'response_{rule}_steps'] = int(np.sum(arrays['response_rules'] == code))
     velocity_excess = np.maximum(np.maximum(config.lower - commands, commands - config.upper), 0.)
     accel_excess = np.maximum(np.abs(acceleration) - config.acceleration, 0.)
     cap_excess = np.maximum(np.linalg.norm(applied[:, :2], axis=1) - np.asarray(caps), 0.)

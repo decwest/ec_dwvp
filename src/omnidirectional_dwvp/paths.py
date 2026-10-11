@@ -149,6 +149,16 @@ def straight_path(length=4.0, spacing=0.005, heading=0.0):
     return np.c_[s * math.cos(heading), s * math.sin(heading), np.full_like(s, heading)]
 
 
+def arc_path(radius=1.0, length=3.0, spacing=0.005):
+    """CCW circle from (0,0), heading +x, with analytic tangent orientation."""
+    if not all(math.isfinite(v) for v in (radius, length, spacing)) or min(radius, length, spacing) <= 0:
+        raise ValueError('radius, length and spacing must be finite and positive')
+    if length > 2 * math.pi * radius:
+        raise ValueError('arc length must not exceed one circumference')
+    theta = np.r_[np.arange(0., length, spacing), length] / radius
+    return np.c_[radius * np.sin(theta), radius * (1 - np.cos(theta)), theta]
+
+
 def orientation_ramp_path(transition_length, length=4.0, spacing=0.005, start=1.0):
     """Straight x-axis path with independent yaw 0 to pi/2; zero length is a step.
 

@@ -395,3 +395,53 @@ each interval and a separate yaw-only sweep. At 0.3 m, nominal and half-accelera
 time series show translation speed, angular velocity, and signed orientation error for
 Clipped VP, Scaled VP, and DWVP, with a separate three-method legend. The error and velocity panels show the whole run through the goal criterion
 or timeout. The report compares every sweep cell without assuming DWVP is best.
+
+## Response distance and five-test study (`access_v3`)
+
+`response_distance: null` preserves the original desired-vector calculation exactly.
+A positive response distance `D_y` changes only the desired translation direction:
+`u = unit(c_hat - (e / D_y) n_hat)`, where `e` and the left normal come from the
+closest path segment and `c_hat` points from that segment projection to the
+unchanged preview target. Rotation into the body frame and translation magnitude
+are unchanged; the angular time rule still uses the robot-to-preview distance.
+The straight-path small-error prediction is `tau = D_y / v`. The same compensated
+demand is available to all omnidirectional VP baselines.
+
+The tangent fallback covers coincident projection/target points and a preview
+that selects the nearest path pose; this avoids a backward chord caused by
+vertex sampling. When the preview contains the path end, `min(D_y, L_prime)`
+handles goal approach, with direct aiming if the chord vanishes. See
+[the C++ port specification](docs/desired_velocity.md) for thresholds, endpoint
+qualifications, the correction to the brief, telemetry, and the generated
+[desired-vector parity fixtures](fixtures/desired_vector_cases.json).
+
+| v3 study | Conditions before travel-time search | Purpose |
+|---|---:|---|
+| `test1` | 30 | Three fixed previews × four response distances, null base, DWPP, and separate clipped-VP comparison |
+| `test2` | 30 | Orientation preview (18), CCW radius-1 m arc (12) |
+| `test3` | 132 | v2 Test 2 constraints, excluding `vp_scaled_accel` |
+| `test4` | 4 | v2 Test 3 obstacle regulation |
+| `test5` | 2424 + search | 2400 noisy trials (20 seeds per condition), 24 rapid-ramp preview trials, and the unchanged v2 travel-time matching search |
+| `all` | 2620 + search | All five studies |
+
+The v3 profile keeps v2's demand at 0.22 m/s, nominal box-speed cap, 0.75 s adaptive
+preview bounded to 0.11–0.33 m, and 30 Hz control. The complete study grid is in
+`configs/access_v3.yaml`. The `study.suite` field selects the versioned planner;
+existing v2 commands and `configs/access_v2.yaml` remain available.
+
+```bash
+mkdir -p build/uv-cache build/matplotlib build/tmp
+export UV_CACHE_DIR="$PWD/build/uv-cache" MPLCONFIGDIR="$PWD/build/matplotlib" TMPDIR="$PWD/build/tmp" PYTHONDONTWRITEBYTECODE=1
+uv run --offline --locked --python 3.11.11 dwvp-study all --config configs/access_v3.yaml --output results/access_v3 --seed 0 --workers 4
+uv run --offline --locked --python 3.11.11 pytest -q --basetemp=build/pytest-tmp > results/access_v3/pytest.txt
+uv run --offline --locked --python 3.11.11 python tools/validate_access_v3.py results/access_v3
+```
+
+`test1` through `test5` also run separately with the same profile and a separate
+output directory. Trials retain complete NPZ histories and JSON metadata under
+`results/access_v3/trials/` (Git-ignored). Each test has a summary CSV and PDF/PNG
+figures; the root holds `REPORT.md`, manifest, computation timings, validation and
+v2 parity evidence. The v3 validator compares all 136 Test 3/4 conditions against
+saved v2 arrays and common metrics without modifying v2 files. It also checks
+coverage, true-pose errors, command constraints, goal/settling definitions,
+response-rule counts, portable fixtures, noise aggregates and rendered assets.

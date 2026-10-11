@@ -3,6 +3,29 @@ import numpy as np
 from .geometry import wrap
 
 
+def segment_tangents(path):
+    """Unit tangents; duplicate segments inherit the nearest nonzero segment.
+
+    Equal index-distance ties use the earlier segment; a constant path uses +x.
+    Projection itself still uses the earliest closest segment, including duplicates.
+    """
+    delta = np.diff(np.asarray(path)[:, :2], axis=0)
+    lengths = np.linalg.norm(delta, axis=1)
+    valid = np.flatnonzero(lengths > 1e-10)
+    tangent = np.tile([1., 0.], (len(delta), 1))
+    if len(valid):
+        tangent[valid] = delta[valid] / lengths[valid, None]
+        for i in np.flatnonzero(lengths <= 1e-10):
+            tangent[i] = tangent[valid[np.argmin(np.abs(valid - i))]]
+    return tangent
+
+
+def signed_lateral_errors(poses, path, reference, segments):
+    tangent = segment_tangents(path)[segments]
+    offset = np.asarray(poses)[:, :2] - reference[:, :2]
+    return -tangent[:, 1] * offset[:, 0] + tangent[:, 0] * offset[:, 1]
+
+
 def project_reference(poses, path):
     """Closest XY point on polyline; yaw interpolated on that same segment.
 

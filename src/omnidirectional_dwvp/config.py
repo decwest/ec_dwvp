@@ -23,6 +23,7 @@ class Config:
     lookahead_max: float = 0.33
     lookahead_time: float = 1.5
     fixed_lookahead: float | None = None
+    response_distance: float | None = None
     orientation_time_weight: float = 1.0
     min_orientation_time: float = 0.20
     goal_xy: float = 0.02
@@ -52,6 +53,8 @@ class Config:
             raise ValueError("lookahead bounds must be ordered and positive")
         if self.fixed_lookahead is not None and self.fixed_lookahead <= 0:
             raise ValueError("fixed lookahead must be positive")
+        if self.response_distance is not None and self.response_distance <= 0:
+            raise ValueError("response distance must be positive")
         if self.vp_translation_speed is not None and self.vp_translation_speed < 0:
             raise ValueError("VP translation speed must be nonnegative")
         if self.cost_scaling_dist <= 0 or self.inflation_factor <= 0:

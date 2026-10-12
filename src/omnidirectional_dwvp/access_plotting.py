@@ -12,7 +12,7 @@ from .access_noise import noise_lookahead_estimate, preview_noise_summary
 COLORS = {'vp': '#2568a0', 'vp_scaled': '#b87510', 'vp_scaled_accel': '#7b52a1',
           'dwvp': '#bf4145', 'dwpp': '#23845d', 'rpp': '#2568a0'}
 LABELS = {'vp': 'Clipped VP', 'vp_scaled': 'Scaled VP', 'vp_scaled_accel': 'Scaled VP (vel. and acc.)',
-          'dwvp': 'DWVP', 'dwpp': 'DWPP', 'rpp': 'RPP'}
+          'dwvp': 'EC-DWVP', 'dwpp': 'DWPP', 'rpp': 'RPP'}
 STYLES = {'vp': '--', 'vp_scaled': '-.', 'vp_scaled_accel': ':', 'dwvp': '-', 'dwpp': (0, (5, 1, 1, 1)), 'rpp': '--'}
 # Publication figures omit the auxiliary method; saved data and validation retain it.
 HEADING_METHODS = ('vp', 'vp_scaled', 'dwvp')
@@ -35,7 +35,7 @@ def save(fig, stem):
 
 
 def panel(stem, curves, xlabel, ylabel, reference=None, vertical=None, xscale='linear', xticks=None):
-    fig, ax = plt.subplots(figsize=(3.35, 2.15))
+    fig, ax = plt.subplots(figsize=(2.3, 1.65))
     for method, x, y in curves:
         # Put dashed RPP above DWVP so identical trajectories show both colors.
         ax.plot(x, y, color=COLORS[method], ls=STYLES[method], lw=1., zorder=3 if method=='rpp' else 2)
@@ -56,7 +56,7 @@ def legend(stem, methods, ratio_boundary=False):
     handles = [Line2D([], [], color=COLORS[m], ls=STYLES[m], lw=1., label=LABELS[m]) for m in methods]
     if ratio_boundary:
         handles.append(Line2D([], [], color='0.35', ls=':', lw=.7,
-                              label=r'$\omega_{\max}/(a_\omega T)=2$'))
+                              label=r'$\rho=2$'))
     fig.legend(handles=handles, loc='center', ncol=len(handles), frameon=False, borderaxespad=0)
     save(fig, stem)
 
@@ -95,7 +95,7 @@ def figures(output, rows, settings, config):
                 with np.load(output/'trials'/row['trial_id']/'trajectory.npz') as a:
                     data.append((row['method'], {k:a[k] for k in a}))
             if test=='test1':
-                fig, ax = plt.subplots(figsize=(3.35, 2.15))
+                fig, ax = plt.subplots(figsize=(2.3, 1.65))
                 for method, a in data:
                     mask = np.ones(len(a['poses']), dtype=bool)
                     ax.plot(a['travel_distance'][mask], a['poses'][mask, 1], color=COLORS[method], ls=STYLES[method], lw=1.)
@@ -115,16 +115,16 @@ def figures(output, rows, settings, config):
                     curves.append((method, a['travel_distance'][mask], np.rad2deg(a['yaw_errors'][mask])))
                 panel(out/(name+'_heading'), curves, 'Travel distance [m]', 'Orientation error [deg]')
             if test in ('test2', 'test3'):
-                for quantity, label in (('speed', 'Translation speed [m/s]'), ('yaw', 'Angular velocity [rad/s]')):
+                for quantity, label in (('speed', 'Translational speed [m/s]'), ('yaw', 'Angular velocity [rad/s]')):
                     curves = [(m, a['times'][:-1], np.linalg.norm(a['applied'][:, :2], axis=1) if quantity=='speed' else a['applied'][:, 2]) for m, a in data]
                     reference = group[0].get('predicted_speed_m_s') if quantity=='speed' and test=='test2' else None
                     panel(out/(name+'_'+quantity), curves, 'Time [s]', label, reference)
             if test=='test3':
                 curves = [(m, a['travel_distance'][:-1], np.linalg.norm(a['applied'][:, :2], axis=1)) for m, a in data]
-                panel(out/(name+'_distance_speed'), curves, 'Travel distance [m]', 'Translation speed [m/s]')
+                panel(out/(name+'_distance_speed'), curves, 'Travel distance [m]', 'Translational speed [m/s]')
         if test=='test3':
             from matplotlib.patches import Circle
-            fig, ax = plt.subplots(figsize=(3.35, 2.15))
+            fig, ax = plt.subplots(figsize=(2.3, 1.65))
             ax.plot([0, settings['path_length']], [0, 0], color='0.2', ls='--', lw=.8)
             for x, y, radius in settings['obstacles']:
                 ax.add_patch(Circle((x, y), radius, color='0.45'))
@@ -144,8 +144,8 @@ def figures(output, rows, settings, config):
                 curves.append((method, [critical/r['transition_length_m'] if ratio else r['transition_length_m'] for r in series],
                                [r['eval_max_heading_error_deg'] for r in series]))
             panel(out/('max_heading_vs_rate_ratio' if ratio else 'max_heading_vs_length'), curves,
-                  r'Required angular velocity / limit' if ratio else 'Orientation transition length [m]',
-                  'Max. orientation error [deg]', vertical=1. if ratio else critical)
+                  r'Required angular velocity / limit' if ratio else r'$\ell$ [m]',
+                  r'$e_{\theta,\max}$ [deg]', vertical=1. if ratio else critical)
         fig = plt.figure(figsize=(3.35, .3))
         fig.legend(handles=[Line2D([], [], color='0.35', ls=':', lw=.7,
                                   label=r'$\omega_{\max}\ell/(\pi/2)$')], loc='center', ncol=1, frameon=False)
@@ -166,14 +166,14 @@ def figures(output, rows, settings, config):
                 continue
             ratio = lambda r: r['acceleration_time_w_s']/r['lookahead_time_s']
             stem = f'acceleration_ratio_ramp_{ell:g}'.replace('.', 'p')
-            for metric, suffix, label in (('post_transition_heading_overshoot_deg', 'overshoot', 'Orientation overshoot [deg]'),
-                                          ('eval_heading_error_integral_deg_s', 'heading_integral', 'Orientation error integral [deg s]'),
-                                          ('eval_max_heading_error_deg', 'heading', 'Max. orientation error [deg]')):
+            for metric, suffix, label in (('post_transition_heading_overshoot_deg', 'overshoot', r'$\theta_{\mathrm{os}}$ [deg]'),
+                                          ('eval_heading_error_integral_deg_s', 'heading_integral', r'$I_\theta$ [deg$\cdot$s]'),
+                                          ('eval_max_heading_error_deg', 'heading', r'$e_{\theta,\max}$ [deg]')):
                 curves = []
                 for method in methods:
                     series = sorted([r for r in group if r['method']==method], key=ratio)
                     curves.append((method, [ratio(r) for r in series], [r[metric] for r in series]))
-                panel(out/(stem+'_'+suffix), curves, r'$\omega_{\max}/(a_\omega T)$', label,
+                panel(out/(stem+'_'+suffix), curves, r'$\rho$', label,
                       vertical=2., xscale='log', xticks=sorted({ratio(r) for r in group}))
         legend(out/'acceleration_time_series_legend', methods)
         for scale in (.25, 1.):
@@ -184,7 +184,7 @@ def figures(output, rows, settings, config):
                 with np.load(output/'trials'/row['trial_id']/'trajectory.npz') as a:
                     data.append((row['method'], {k:a[k] for k in a}))
             stem = f"ramp_{settings['representative_rapid']:g}_acceleration_{scale:g}".replace('.', 'p')
-            for quantity, label in (('speed', 'Translation speed [m/s]'), ('yaw', 'Angular velocity [rad/s]'),
+            for quantity, label in (('speed', 'Translational speed [m/s]'), ('yaw', 'Angular velocity [rad/s]'),
                                     ('signed_heading', 'Signed orientation error [deg]')):
                 curves = []
                 for method, a in data:
@@ -228,7 +228,7 @@ def figures(output, rows, settings, config):
         return
     for scene in ('offset', 'gradual', 'rapid'):
         metric, label = ('crossing_m', 'Crossing [m]') if scene=='offset' else ('eval_max_heading_error_deg', 'Max. orientation error [deg]')
-        fig, ax = plt.subplots(figsize=(3.35, 2.15))
+        fig, ax = plt.subplots(figsize=(2.3, 1.65))
         for method in ('dwpp', 'vp', 'vp_scaled', 'dwvp'):
             series = sorted([r for r in noise if r['scenario']==scene and r['method']==method], key=lambda r:r['noise_xy_m'])
             if series:
@@ -254,7 +254,7 @@ def preview_noise_figures(output, rows, config):
     handles.append(Line2D([], [], color='0.35', ls=':', lw=.8,
                           label=rf'$L={noise_lookahead_estimate(config, 1.):g}\sigma_{{xy}}$ (same color)'))
     for scene in dict.fromkeys(r['scenario'] for r in grouped):
-        fig, ax = plt.subplots(figsize=(3.35, 2.15))
+        fig, ax = plt.subplots(figsize=(2.3, 1.65))
         for i, (xy, yaw) in enumerate(levels):
             series = sorted((r for r in grouped if (r['scenario'], r['noise_xy_m'], r['noise_yaw_deg']) == (scene, xy, yaw)),
                             key=lambda r: r['value'])

@@ -33,11 +33,11 @@ def load(output, row):
         return {k: saved[k] for k in saved}
 
 
-def finish(fig, ax, stem, xlabel, ylabel, legend=True, legend_fontsize=7):
+def finish(fig, ax, stem, xlabel, ylabel, legend=True, legend_fontsize=7, legend_loc='best'):
     ax.set(xlabel=xlabel, ylabel=ylabel)
     ax.grid(alpha=.2, lw=.4)
     if legend:
-        ax.legend(frameon=False, fontsize=legend_fontsize)
+        ax.legend(frameon=False, fontsize=legend_fontsize, loc=legend_loc)
     save(fig, stem)
 
 
@@ -95,9 +95,9 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
         return
     response = parameter=='response_distance'
     if response:
-        fig, (ax, base) = plt.subplots(1, 2, figsize=(6.1, 2.9), sharey=True, gridspec_kw={'width_ratios': [4.5, 1]})
+        fig, (ax, base) = plt.subplots(1, 2, figsize=(3.3, 2.3), sharey=True, gridspec_kw={'width_ratios': [4.5, 1]})
     else:
-        fig, ax = plt.subplots(figsize=(4.3, 2.7))
+        fig, ax = plt.subplots(figsize=(3.3, 2.3))
         base = None
     levels = sorted({(r['noise_xy_m'], r['noise_yaw_deg']) for r in group})
     for i, (xy, yaw) in enumerate(levels):
@@ -119,7 +119,7 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
         base.set(xticks=[], xlabel=label(None, config.translation_speed), xlim=(-.8,len(levels)-.2))
         base.grid(axis='y', alpha=.2, lw=.4)
         ax.set_xlim(0, 1.05*max(r['tau_y_s'] for r in group))
-        fig.legend(*ax.get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(.5,-.02), ncol=2, frameon=False, fontsize=7)
+        ax.legend(frameon=False, fontsize=7, loc='upper right')
     stem = 'response' if response else 'lookahead'
     suffix = '' if component=='combined' else '_'+component
     finish(fig, ax, output/'test5'/f'test5_noise_travel_time_vs_{stem}{suffix}',
@@ -157,7 +157,7 @@ def figures(output, rows, manifest, grouped):
     chosen = [r for r in rows if r['test']=='test1' and r['method']=='dwvp']
     if chosen:
         for look in manifest['settings']['response_lookaheads']:
-            fig, ax = plt.subplots(figsize=(3.8, 2.4))
+            fig, ax = plt.subplots(figsize=(2.3, 1.65))
             for r in chosen:
                 if r['fixed_lookahead_m'] != look:
                     continue
@@ -186,24 +186,50 @@ def figures(output, rows, manifest, grouped):
             finish(fig, ax, output/'test1'/f'test1_{stem}_vs_response', r'Time constant $\tau_y$ [s]', ylabel)
     ramps = [r for r in rows if r['test']=='test2' and r['part']=='a']
     arcs = [r for r in rows if r['test']=='test2' and r['part']=='b']
-    for group, stem, metric, ylabel in ((ramps, 'orientation', 'eval_max_heading_error_deg', 'Max. orientation error [deg]'),
-                                       (arcs, 'incut', 'steady_lateral_error_m', 'Steady inside offset [m]')):
+    for group, stem, metric, ylabel in ((ramps, 'orientation', 'eval_max_heading_error_deg', r'$e_{\theta,\max}$ [deg]'),
+                                       (arcs, 'incut', 'steady_lateral_error_m', r'$e_{\mathrm{in}}$ [m]')):
         if not group:
             continue
-        fig, ax = plt.subplots(figsize=(3.8, 2.4))
+        fig, ax = plt.subplots(figsize=(1.75, 1.55))
         for d in dict.fromkeys(r['response_distance_m'] for r in group):
             series = sorted([r for r in group if r['response_distance_m']==d], key=lambda r:r['fixed_lookahead_m'])
             x = [r['fixed_lookahead_m'] for r in series]
-            if d is None:
-                taus = [r['tau_y_s'] for r in series]
-                # The base time constant follows the swept lookahead distance; show its range.
-                series_label = rf"base ($\tau_y=L'/v_{{\mathrm{{des}}}}$, {min(taus):g} to {max(taus):g} s)"
-            else:
-                series_label = label(d, speed)
-            ax.plot(x, [r[metric] for r in series], color=RESPONSE_COLORS[d], marker='o', ms=3, label=series_label, ls='--' if d is None else '-')
+            ax.plot(x, [r[metric] for r in series], color=RESPONSE_COLORS[d], marker='o', ms=3, label=label(d, speed), ls='--' if d is None else '-')
             if stem=='incut':
                 ax.plot(x, [r['incut_prediction_m'] for r in series], color=RESPONSE_COLORS[d], ls=':', lw=.8)
-        finish(fig, ax, output/'test2'/f'test2_{stem}_vs_lookahead', 'Lookahead distance [m]', ylabel, legend_fontsize=8.5)
+        finish(fig, ax, output/'test2'/f'test2_{stem}_vs_lookahead', r'$L$ [m]', ylabel, legend=False)
+    # Response panels (ECPP style): the orientation error along the section and the lateral error along the arc.
+    ramp_series = sorted([r for r in ramps if r['response_distance_m'] is not None and abs(r['tau_y_s']-.5)<1e-9
+                          and r['fixed_lookahead_m'] in (.055, .165, .33)], key=lambda r: r['fixed_lookahead_m'])
+    if ramp_series:
+        fig, ax = plt.subplots(figsize=(1.75, 1.55))
+        start, length = config.transition_start if hasattr(config, 'transition_start') else 1.0, ramp_series[0]['transition_length_m']
+        ax.axvspan(start, start+length, color='#bf4145', alpha=.12, lw=0)
+        for r, color in zip(ramp_series, ('#1b9e77', '#d95f02', '#7570b3')):
+            a = load(output, r)
+            yaw = np.degrees(a['signed_yaw_errors']) if np.max(np.abs(a['signed_yaw_errors'])) < 3.2 else a['signed_yaw_errors']
+            ax.plot(a['travel_distance'], yaw, color=color, lw=1, label=rf"$L={r['fixed_lookahead_m']:g}$ m")
+        ax.axhline(0, color='.5', lw=.5)
+        ax.set_xlim(0.7, 2.3)
+        finish(fig, ax, output/'test2'/'test2_orientation_response', 'Travel distance [m]', r'$e_\theta$ [deg]', legend_fontsize=6.5, legend_loc='upper right')
+    arc_series = sorted([r for r in arcs if r['fixed_lookahead_m']==.33], key=lambda r: (r['response_distance_m'] is None, r['response_distance_m'] or 0))
+    if arc_series:
+        fig, ax = plt.subplots(figsize=(1.75, 1.55))
+        for r in arc_series:
+            a = load(output, r)
+            d = r['response_distance_m']
+            ax.plot(a['travel_distance'], a['signed_lateral_errors'], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1,
+                    label=label(d, speed))
+        ax.axhline(0, color='.5', lw=.5)
+        ax.set_ylim(bottom=-0.012)
+        finish(fig, ax, output/'test2'/'test2_arc_lateral_error', 'Travel distance [m]', r'$e$ [m]', legend=False)
+    if ramps or arcs:
+        # Shared legend of the time constants for the Test 2 panels (the lookahead legend stays inside panel (a)).
+        fig = plt.figure(figsize=(4.6, .3))
+        handles = [Line2D([], [], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', marker='o', ms=3, label=label(d, speed))
+                   for d in [.11, .165, .33, None]]
+        fig.legend(handles=handles, loc='center', ncol=4, frameon=False, borderaxespad=0)
+        save(fig, output/'test2'/'test2_legend')
     if arcs:
         series = [r for r in arcs if r['fixed_lookahead_m']==.33]
         fig, ax = plt.subplots(figsize=(4.5, 3.1))

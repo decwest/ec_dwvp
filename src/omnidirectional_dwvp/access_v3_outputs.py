@@ -33,11 +33,11 @@ def load(output, row):
         return {k: saved[k] for k in saved}
 
 
-def finish(fig, ax, stem, xlabel, ylabel, legend=True):
+def finish(fig, ax, stem, xlabel, ylabel, legend=True, legend_fontsize=7):
     ax.set(xlabel=xlabel, ylabel=ylabel)
     ax.grid(alpha=.2, lw=.4)
     if legend:
-        ax.legend(frameon=False, fontsize=7)
+        ax.legend(frameon=False, fontsize=legend_fontsize)
     save(fig, stem)
 
 
@@ -165,7 +165,6 @@ def figures(output, rows, manifest, grouped):
                 d = r['response_distance_m']
                 ax.plot(a['times'], a['signed_lateral_errors'], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1)
             ax.axhline(0, color='.5', lw=.5)
-            ax.set_title(f'L = {look:g} m')
             finish(fig, ax, output/'test1'/f'test1_response_L{tag(look)}_lateral', 'Time [s]', 'Signed lateral error [m]', False)
         fig = plt.figure(figsize=(7.0, .7))
         handles = [Line2D([], [], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', label=label(d, speed))
@@ -195,10 +194,16 @@ def figures(output, rows, manifest, grouped):
         for d in dict.fromkeys(r['response_distance_m'] for r in group):
             series = sorted([r for r in group if r['response_distance_m']==d], key=lambda r:r['fixed_lookahead_m'])
             x = [r['fixed_lookahead_m'] for r in series]
-            ax.plot(x, [r[metric] for r in series], color=RESPONSE_COLORS[d], marker='o', ms=3, label=label(d, speed), ls='--' if d is None else '-')
+            if d is None:
+                taus = [r['tau_y_s'] for r in series]
+                # The base time constant follows the swept lookahead distance; show its range.
+                series_label = rf"base ($\tau_y=L'/v_{{\mathrm{{des}}}}$, {min(taus):g} to {max(taus):g} s)"
+            else:
+                series_label = label(d, speed)
+            ax.plot(x, [r[metric] for r in series], color=RESPONSE_COLORS[d], marker='o', ms=3, label=series_label, ls='--' if d is None else '-')
             if stem=='incut':
                 ax.plot(x, [r['incut_prediction_m'] for r in series], color=RESPONSE_COLORS[d], ls=':', lw=.8)
-        finish(fig, ax, output/'test2'/f'test2_{stem}_vs_lookahead', 'Lookahead distance [m]', ylabel)
+        finish(fig, ax, output/'test2'/f'test2_{stem}_vs_lookahead', 'Lookahead distance [m]', ylabel, legend_fontsize=8.5)
     if arcs:
         series = [r for r in arcs if r['fixed_lookahead_m']==.33]
         fig, ax = plt.subplots(figsize=(4.5, 3.1))

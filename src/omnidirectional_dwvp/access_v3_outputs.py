@@ -22,11 +22,10 @@ def tag(value):
     return f'{value:g}'.replace('.', 'p')
 
 
-def label(response, speed, distance=False):
+def label(response, speed):
     if response is None:
-        return r"$D_y=L'$"
-    result = rf'$\tau_y={response/speed:g}$ s'
-    return result + (rf' ($D_y={response:g}$ m)' if distance else '')
+        return r"base ($\tau_y=L'/v_{\mathrm{des}}$)"
+    return rf'$\tau_y={response/speed:g}$ s'
 
 
 def load(output, row):
@@ -60,7 +59,7 @@ def recovery_summary(grouped, config, component='combined'):
     result = []
     for parameter in ('response_distance', 'fixed_lookahead'):
         rows = [r for r in noise_subset(grouped, component) if r['scenario']=='offset' and r['parameter']==parameter
-                and (component=='combined' or parameter=='response_distance')]
+                and (component!='yaw_only' or parameter=='response_distance')]
         baseline = {r['value']: r for r in rows if r['noise_xy_m']==r['noise_yaw_deg']==0}
         for xy, yaw in sorted({(r['noise_xy_m'], r['noise_yaw_deg']) for r in rows}):
             recovered = None
@@ -117,7 +116,7 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
             base.errorbar([i], [r['travel_time_s_mean'] if r['travel_time_s_mean'] is not None else np.nan],
                           yerr=[r['travel_time_s_std'] or 0], color=NOISE_COLORS[i], marker='o', ms=3, capsize=2)
     if base is not None:
-        base.set(xticks=[], xlabel=r"Base $D_y=L'$", xlim=(-.8,len(levels)-.2))
+        base.set(xticks=[], xlabel=label(None, config.translation_speed), xlim=(-.8,len(levels)-.2))
         base.grid(axis='y', alpha=.2, lw=.4)
         ax.set_xlim(0, 1.05*max(r['tau_y_s'] for r in group))
         fig.legend(*ax.get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(.5,-.02), ncol=2, frameon=False, fontsize=7)
@@ -169,9 +168,10 @@ def figures(output, rows, manifest, grouped):
             ax.set_title(f'L = {look:g} m')
             finish(fig, ax, output/'test1'/f'test1_response_L{tag(look)}_lateral', 'Time [s]', 'Signed lateral error [m]', False)
         fig = plt.figure(figsize=(7.0, .7))
-        handles = [Line2D([], [], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', label=label(d, speed, distance=True))
+        handles = [Line2D([], [], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', label=label(d, speed))
                    for d in [*manifest['settings']['response_distances'], None]]
-        fig.legend(handles=handles, loc='center', ncol=3, frameon=False)
+        # Retain the standalone legend's original 315 pt exported width.
+        fig.legend(handles=handles, loc='center', ncol=3, frameon=False, columnspacing=6.3125)
         save(fig, output/'test1'/'test1_response_legend')
         for metric, stem, ylabel in (('settling_2pct_time_s', 'settling', '2% settling time [s]'), ('crossing_m', 'crossing', 'Crossing [m]')):
             fig, ax = plt.subplots(figsize=(3.8, 2.4))
@@ -206,11 +206,14 @@ def figures(output, rows, manifest, grouped):
         for i, r in enumerate(series):
             a = load(output, r)
             d = r['response_distance_m']
+            # Stack the longer base label to retain the arc panel's natural width.
+            arc_label = ('base\n'+r"($\tau_y=\frac{L'}{v_{\mathrm{des}}}$)"
+                         if d is None else label(d, speed))
             if i == 0:
                 for axis in (ax, inset):
                     axis.plot(a['path'][:, 0], a['path'][:, 1], ':', color='.2', label='Reference')
             for axis in (ax, inset):
-                axis.plot(a['poses'][:, 0], a['poses'][:, 1], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1, label=label(d, speed))
+                axis.plot(a['poses'][:, 0], a['poses'][:, 1], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1, label=arc_label)
         inset.set(xlim=(.89, 1.015), ylim=(.78, 1.03))
         inset.tick_params(labelsize=5.5)
         inset.grid(alpha=.2)
@@ -220,6 +223,7 @@ def figures(output, rows, manifest, grouped):
     for component in ('combined', 'xy_only', 'yaw_only'):
         noise_travel_figure(output, grouped, config, 'response_distance', component)
     noise_travel_figure(output, grouped, config, 'fixed_lookahead')
+    noise_travel_figure(output, grouped, config, 'fixed_lookahead', 'xy_only')
     rapid = [r for r in grouped if r['scenario']=='rapid']
     if rapid:
         fig, ax = plt.subplots(figsize=(4.1, 2.6))
@@ -229,7 +233,8 @@ def figures(output, rows, manifest, grouped):
                         yerr=[r['eval_max_heading_error_deg_std'] or 0 for r in series], lw=1, capsize=2,
                         color='#23845d' if parameter=='response_distance' else COLORS[method],
                         ls=':' if parameter=='response_distance' else STYLES[method], marker='o', ms=3,
-                        label='DWVP L=0.11, Dy=0.33' if parameter=='response_distance' else LABELS[method])
+                        label='DWVP L=0.11 m, '+label(series[0]['response_distance_m'], speed)
+                        if parameter=='response_distance' else LABELS[method])
         finish(fig, ax, output/'test5'/'test5_noise_orientation', 'Position noise standard deviation [m]', 'Mean max. orientation error [deg]')
     sweep = [r for r in rows if r['test']=='test5' and r['part']=='c']
     if sweep:
@@ -409,7 +414,8 @@ def report(output, rows, manifest, grouped, recovery, predictions):
                       for xy,yaw in levels for r in group if r['value']==value and (r['noise_xy_m'],r['noise_yaw_deg'])==(xy,yaw)]]
                    for value in values])
             if component=='xy_only':
-                recovered = [r for r in recovery_summary(grouped, config, component) if r['noise_xy_m']>0]
+                recovered = [r for r in recovery_summary(grouped, config, component)
+                             if r['noise_xy_m']>0 and r['parameter']=='response_distance']
                 table(['σxy [m]', 'estimate 30 σxy [m]', 'estimate τy [s]', 'smallest Dy within 10% [m]', 'tau_y_s', 'mean time [s]', 'paired zero [s]'],
                       [[r[k] for k in ('noise_xy_m','estimate_m','estimate_tau_y_s','minimum_distance_m','tau_y_s','travel_time_s_mean','zero_noise_time_s_mean')] for r in recovered])
                 lines.extend(['The smallest qualifying distance is selected among explicit Dy values (0.165–0.60 m), excludes the base law, and requires all 20 seeds to succeed; an absent value means none in this grid qualifies.', ''])
@@ -422,6 +428,21 @@ def report(output, rows, manifest, grouped, recovery, predictions):
                     if finite:
                         lines.append(f'At σyaw={yaw:g}°, the noisy/noise-free mean travel-time ratio spans {min(finite):.3f}–{max(finite):.3f} across the base and explicit Dy settings.')
                 lines.extend(['', 'Ratios use each setting’s own zero-noise mean; yaw noise is independent of position noise in these runs, and any dependence on Dy is reported rather than assumed absent.', ''])
+        base_group = [r for r in noise_subset(grouped, 'xy_only')
+                      if r['scenario']=='offset' and r['parameter']=='fixed_lookahead']
+        if any(noise_component(r)=='xy_only' for r in base_group):
+            lines.extend(['### Test 5(b): base lookahead under position-only noise', '',
+                          'The base law (`response_distance = None`) uses fixed L = {0.055, 0.08, 0.11, 0.165, 0.22, 0.33, 0.44, 0.60} m on the offset scene, with σyaw = 0 and 20 seeds per setting. Each cell gives mean ± sample SD [s], successes/20; zero-noise rows reuse the combined experiment.', ''])
+            levels = sorted({r['noise_xy_m'] for r in base_group})
+            table(['L [m]']+[f'σxy = {xy:g} m' for xy in levels],
+                  [[look, *[f"{fmt(r['travel_time_s_mean'])} ± {fmt(r['travel_time_s_std'])}, {r['success_count']}/{r['n']}"
+                            for xy in levels for r in base_group if r['value']==look and r['noise_xy_m']==xy]]
+                   for look in manifest['settings']['fixed_lookaheads']])
+            recovered = [r for r in recovery_summary(grouped, config, 'xy_only')
+                         if r['noise_xy_m']>0 and r['parameter']=='fixed_lookahead']
+            table(['σxy [m]', 'estimate 30 σxy [m]', 'smallest L within 10% [m]', 'mean time [s]', 'paired zero [s]'],
+                  [[r[k] for k in ('noise_xy_m','estimate_m','minimum_distance_m','travel_time_s_mean','zero_noise_time_s_mean')] for r in recovered])
+            lines.extend(['Recovery requires all 20 seeds to succeed and the mean travel time to be at most 1.1 times the noise-free mean at the same L. An absent value means no sampled L qualifies. `test5_noise_travel_time_vs_lookahead_xy_only.{pdf,png}` plots the mean ± sample SD and vertical estimates at 0.06, 0.15, 0.30 and 0.60 m; `travel_time_recovery_xy_only.csv` includes these base rows under `parameter=fixed_lookahead`.', ''])
         heading('Test 5(c): fixed preview on rapid ramp')
         table(['L [m]','method','max eψ [deg]','travel [s]'], [[r['value'],r['method'],r['eval_max_heading_error_deg'],r['travel_time_s']] for r in fifth if r['part']=='c'])
     if historical_verification:
@@ -447,6 +468,11 @@ def report(output, rows, manifest, grouped, recovery, predictions):
     elapsed = sum(a.get('simulation_wall_time_s') or 0. for a in attempts) + manifest['simulation_wall_time_s']
     lines.extend([f"Simulation/cache wall time over {len(attempts)+1} execution attempts: {elapsed:.1f} s (current {manifest['simulation_wall_time_s']:.1f} s, {manifest.get('cache_hits',0)} cache hits); source {manifest['source_sha256']}; numerical source {manifest['numerical_source_sha256']}.", '',
                   'The sampled-path tangent fallback and endpoint limits of the compensation identity are specified in `docs/desired_velocity.md`.', ''])
+    if manifest.get('total_wall_time_s') is not None:
+        lines.extend([f"Current run including figure regeneration: {manifest['total_wall_time_s']:.1f} s.", ''])
+    if manifest.get('figures'):
+        lines.extend(['Regenerated figures (each stem has PDF and PNG outputs; labels use τy without the response distance):', '',
+                      *[f'- `{stem}.{{pdf,png}}`' for stem in manifest['figures']], ''])
     validation_path = output/'validation.json'
     if validation_path.exists():
         validation = json.loads(validation_path.read_text())
@@ -476,4 +502,5 @@ def outputs(output, rows, manifest):
     manifest['v2_parity'] = parity(output, manifest)
     predictions = unchanged_figures(output, rows, manifest)
     figures(output, rows, manifest, grouped)
+    manifest['figures'] = [str(p.relative_to(output).with_suffix('')) for p in sorted(output.glob('test*/*.pdf'))]
     report(output, rows, manifest, grouped, recovery, predictions)

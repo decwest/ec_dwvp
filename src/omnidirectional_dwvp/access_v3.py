@@ -77,6 +77,11 @@ def plan_conditions(config, settings, seed, selected):
             cfg = replace(config, fixed_lookahead=.11, response_distance=response,
                           noise_xy=xy, noise_yaw=float(np.deg2rad(yaw)))
             add('test5', 'b', offset, cfg, parameter='response_distance', value=response, seeds=seeds)
+        if xy:
+            for look in settings['fixed_lookaheads']:
+                cfg = replace(config, fixed_lookahead=look, response_distance=None,
+                              noise_xy=xy, noise_yaw=0.)
+                add('test5', 'b', offset, cfg, parameter='fixed_lookahead', value=look, seeds=seeds)
     return conditions
 
 
@@ -89,7 +94,7 @@ def run(study, output, config, settings, seed=0, force=False, config_path=None, 
         raise ValueError('output must be a real directory')
     conditions = plan_conditions(config, settings, seed, selected)
     numerical_source = numerical_hash()
-    manifest = dict(schema_version=1, planner_version='access_v3.2', suite='access_v3', study=study,
+    manifest = dict(schema_version=1, planner_version='access_v3.3', suite='access_v3', study=study,
                     source_sha256=code_hash(), numerical_source_sha256=numerical_source,
                     git_revision=git_revision(), python=sys.version, numpy=np.__version__, platform=platform.platform(),
                     cpu_model=cpu_model(), workers=workers, seed=seed, config=asdict(config), settings=settings,

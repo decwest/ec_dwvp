@@ -37,7 +37,7 @@ def validate(root,study='all'):
     manifest_path=root/('manifest.json' if study=='all' else f'manifest_{study}.json')
     manifest=json.loads(manifest_path.read_text())
     assert manifest['complete'] and manifest['suite']=='access_v3'
-    assert manifest['planner_version']=='access_v3.2'
+    assert manifest['planner_version']=='access_v3.3'
     assert manifest['source_sha256']==code_hash()
     assert manifest['numerical_source_sha256']==numerical_hash()
     assert manifest['dependency_lock_sha256']==hashlib.sha256((ROOT/'uv.lock').read_bytes()).hexdigest()
@@ -117,6 +117,14 @@ def validate(root,study='all'):
         if len(unique)%250==0:
             print(f'Validated {len(unique)} distinct trajectories',flush=True)
     grouped=noise_summary(rows)
+    position_only_base=[r for r in rows if r['test']=='test5' and r['part']=='b'
+                        and r['parameter']=='fixed_lookahead' and r['noise_xy_m']>0 and r['noise_yaw_deg']==0]
+    if 'test5' in selected:
+        settings=manifest['settings']
+        assert Counter((r['fixed_lookahead_m'],r['noise_xy_m'],r['seed']) for r in position_only_base)==Counter(
+            (look,xy,seed) for look in settings['fixed_lookaheads'] for xy in settings['noise_xy_only_levels']
+            for seed in range(manifest['seed'],manifest['seed']+settings['noise_seeds']))
+        assert all(r['scenario']=='offset' and r['method']=='dwvp' and r['response_distance_m'] is None for r in position_only_base)
     recovery=recovery_summary(grouped,cfg)
     if grouped:
         csv_matches(root/'test5/noise_summary.csv',grouped)
@@ -148,9 +156,13 @@ def validate(root,study='all'):
     if 'test4' in selected:
         expected_stems += ['test4/test4_'+s for s in ('scene','cost0_approach1_distance_speed','cost1_approach1_distance_speed')]
     if 'test5' in selected:
-        expected_stems += ['test5/test5_'+s for s in ('noise_travel_time_vs_response','noise_travel_time_vs_response_xy_only','noise_travel_time_vs_response_yaw_only','noise_travel_time_vs_lookahead','noise_orientation','orientation_vs_lookahead')]
+        expected_stems += ['test5/test5_'+s for s in ('noise_travel_time_vs_response','noise_travel_time_vs_response_xy_only','noise_travel_time_vs_response_yaw_only','noise_travel_time_vs_lookahead','noise_travel_time_vs_lookahead_xy_only','noise_orientation','orientation_vs_lookahead')]
+    figure_stems=[str(p.relative_to(root).with_suffix('')) for p in sorted(root.glob('test*/*.pdf'))]
+    assert manifest['figures']==figure_stems
+    assert set(expected_stems)<=set(figure_stems)
+    assert set(figure_stems)=={str(p.relative_to(root).with_suffix('')) for p in root.glob('test*/*.png')}
     from matplotlib.image import imread
-    for stem in expected_stems:
+    for stem in figure_stems:
         pdf=(root/(stem+'.pdf')).read_bytes()
         assert pdf.startswith(b'%PDF') and len(pdf)>1000
         pixels=imread(root/(stem+'.png'))
@@ -177,7 +189,11 @@ def validate(root,study='all'):
             assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==digest,path
         protected=len(hashes)
     validation=dict(status='passed',conditions=len(rows),distinct_trajectories=len(unique),
-                    command_cycles_replayed=replays,noise_groups=len(grouped),desired_vector_fixture_cases=len(fixtures),
+                    command_cycles_replayed=replays,noise_groups=len(grouped),
+                    position_only_base_conditions=len(position_only_base),
+                    position_only_base_recovery=[r for r in recovery_summary(grouped,cfg,'xy_only')
+                                                 if r['parameter']=='fixed_lookahead' and r['noise_xy_m']>0],
+                    desired_vector_fixture_cases=len(fixtures),
                     required_figure_pairs=len(expected_stems),figure_pairs=len(list(root.glob('test*/*.pdf'))),
                     v2_parity=proof,protected_v2_files_unchanged=protected,
                     source_sha256=code_hash(),numerical_source_sha256=numerical_hash(),

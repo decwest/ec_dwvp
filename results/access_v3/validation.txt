@@ -11,22 +11,72 @@ Validated 2500 distinct trajectories
 Validated 2750 distinct trajectories
 Validated 3000 distinct trajectories
 Validated 3250 distinct trajectories
+Validated 3500 distinct trajectories
+Validated 3750 distinct trajectories
+Validated 4000 distinct trajectories
 {
   "status": "passed",
-  "conditions": 3601,
-  "distinct_trajectories": 3468,
-  "command_cycles_replayed": 23293,
-  "noise_groups": 168,
+  "conditions": 4241,
+  "distinct_trajectories": 4028,
+  "command_cycles_replayed": 26093,
+  "noise_groups": 200,
+  "position_only_base_conditions": 640,
+  "position_only_base_recovery": [
+    {
+      "parameter": "fixed_lookahead",
+      "noise_xy_m": 0.002,
+      "noise_yaw_deg": 0.0,
+      "estimate_m": 0.060000000000000005,
+      "estimate_tau_y_s": 0.27272727272727276,
+      "minimum_distance_m": 0.055,
+      "tau_y_s": 0.25,
+      "travel_time_s_mean": 27.916666666666668,
+      "zero_noise_time_s_mean": 26.866666666666667
+    },
+    {
+      "parameter": "fixed_lookahead",
+      "noise_xy_m": 0.005,
+      "noise_yaw_deg": 0.0,
+      "estimate_m": 0.15000000000000002,
+      "estimate_tau_y_s": 0.6818181818181819,
+      "minimum_distance_m": 0.11,
+      "tau_y_s": 0.5,
+      "travel_time_s_mean": 27.878333333333337,
+      "zero_noise_time_s_mean": 25.5
+    },
+    {
+      "parameter": "fixed_lookahead",
+      "noise_xy_m": 0.01,
+      "noise_yaw_deg": 0.0,
+      "estimate_m": 0.30000000000000004,
+      "estimate_tau_y_s": 1.3636363636363638,
+      "minimum_distance_m": 0.22,
+      "tau_y_s": 1.0,
+      "travel_time_s_mean": 27.333333333333332,
+      "zero_noise_time_s_mean": 25.0
+    },
+    {
+      "parameter": "fixed_lookahead",
+      "noise_xy_m": 0.02,
+      "noise_yaw_deg": 0.0,
+      "estimate_m": 0.6000000000000001,
+      "estimate_tau_y_s": 2.7272727272727275,
+      "minimum_distance_m": null,
+      "tau_y_s": null,
+      "travel_time_s_mean": null,
+      "zero_noise_time_s_mean": null
+    }
+  ],
   "desired_vector_fixture_cases": 192,
-  "required_figure_pairs": 42,
-  "figure_pairs": 81,
+  "required_figure_pairs": 43,
+  "figure_pairs": 82,
   "v2_parity": {
     "available": true,
     "compared_conditions": 136,
     "maximum_absolute_difference": 0.0
   },
   "protected_v2_files_unchanged": 17251,
-  "source_sha256": "d4b5f9684eb2e128c14fdeba563ad3c72004751f97b6bc675e5c01e6d0a2bfe6",
+  "source_sha256": "6e89233edf743a89f2e4d633c845bfd8e1b06f680bfee0bef7fcf60496e5f6b0",
   "numerical_source_sha256": "aa98e75c1f01eb1ae0bf11418d138b39f43e6b5978e80fdfd3eafc38006b9877",
-  "wall_time_s": 147.01848763797898
+  "wall_time_s": 166.1166402429808
 }

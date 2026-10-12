@@ -8,7 +8,7 @@ Constraint share is the percentage of final commands violating physical velocity
 
 Signed lateral error uses the closest segment’s left normal; arc steady error is the time mean over the middle temporal third.
 
-The counts above and the original sections describe the combined-noise study; the added noise-decomposition subsections and follow-up verification include 960 additional trials.
+The counts above and the original sections describe the combined-noise study; the added noise-decomposition subsections and follow-up verification include 1600 additional trials.
 
 | test | scene | method | parameter | value | noise xy [m] | status | count |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -494,6 +494,30 @@ At σyaw=1°, the noisy/noise-free mean travel-time ratio spans 1.189–1.225 ac
 
 Ratios use each setting’s own zero-noise mean; yaw noise is independent of position noise in these runs, and any dependence on Dy is reported rather than assumed absent.
 
+### Test 5(b): base lookahead under position-only noise
+
+The base law (`response_distance = None`) uses fixed L = {0.055, 0.08, 0.11, 0.165, 0.22, 0.33, 0.44, 0.60} m on the offset scene, with σyaw = 0 and 20 seeds per setting. Each cell gives mean ± sample SD [s], successes/20; zero-noise rows reuse the combined experiment.
+
+| L [m] | σxy = 0 m | σxy = 0.002 m | σxy = 0.005 m | σxy = 0.01 m | σxy = 0.02 m |
+| --- | --- | --- | --- | --- | --- |
+| 0.055 | 26.867 ± 0.000, 20/20 | 27.917 ± 0.223, 20/20 | 43.142 ± 1.610, 20/20 | 75.793 ± 2.495, 20/20 | — ± —, 0/20 |
+| 0.080 | 26.400 ± 0.000, 20/20 | 26.792 ± 0.124, 20/20 | 32.792 ± 0.889, 20/20 | 54.560 ± 2.088, 20/20 | 100.917 ± 3.357, 20/20 |
+| 0.110 | 25.500 ± 0.000, 20/20 | 25.683 ± 0.056, 20/20 | 27.878 ± 0.503, 20/20 | 41.385 ± 1.795, 20/20 | 74.775 ± 2.596, 20/20 |
+| 0.165 | 25.267 ± 0.000, 20/20 | 25.342 ± 0.054, 20/20 | 25.998 ± 0.159, 20/20 | 30.733 ± 1.124, 20/20 | 50.775 ± 2.330, 20/20 |
+| 0.220 | 25.000 ± 0.000, 20/20 | 25.043 ± 0.041, 20/20 | 25.448 ± 0.081, 20/20 | 27.333 ± 0.442, 20/20 | 40.242 ± 1.707, 20/20 |
+| 0.330 | 24.500 ± 0.000, 20/20 | 24.555 ± 0.036, 20/20 | 24.738 ± 0.120, 20/20 | 25.675 ± 0.288, 20/20 | 30.848 ± 1.046, 20/20 |
+| 0.440 | 23.967 ± 0.000, 20/20 | 24.040 ± 0.050, 20/20 | 24.333 ± 0.124, 20/20 | 25.065 ± 0.289, 20/20 | 27.987 ± 0.657, 20/20 |
+| 0.600 | 23.333 ± 0.000, 20/20 | 23.382 ± 0.031, 20/20 | 23.578 ± 0.113, 20/20 | 24.107 ± 0.230, 20/20 | 26.283 ± 0.559, 20/20 |
+
+| σxy [m] | estimate 30 σxy [m] | smallest L within 10% [m] | mean time [s] | paired zero [s] |
+| --- | --- | --- | --- | --- |
+| 0.002 | 0.060 | 0.055 | 27.917 | 26.867 |
+| 0.005 | 0.150 | 0.110 | 27.878 | 25.500 |
+| 0.010 | 0.300 | 0.220 | 27.333 | 25.000 |
+| 0.020 | 0.600 | — | — | — |
+
+Recovery requires all 20 seeds to succeed and the mean travel time to be at most 1.1 times the noise-free mean at the same L. An absent value means no sampled L qualifies. `test5_noise_travel_time_vs_lookahead_xy_only.{pdf,png}` plots the mean ± sample SD and vertical estimates at 0.06, 0.15, 0.30 and 0.60 m; `travel_time_recovery_xy_only.csv` includes these base rows under `parameter=fixed_lookahead`.
+
 ## Test 5(c): fixed preview on rapid ramp
 
 | L [m] | method | max eψ [deg] | travel [s] |
@@ -745,7 +769,7 @@ Generated files (per-trial NPZ/JSON files are Git-ignored):
 
 | method | distinct trials | cycle-weighted mean [µs] | median trial p95 [µs] | maximum [µs] |
 | --- | --- | --- | --- | --- |
-| dwvp | 2641 | 151.050 | 260.576 | 9428.630 |
+| dwvp | 3201 | 136.116 | 121.063 | 9428.630 |
 | vp | 367 | 70.225 | 83.371 | 958.515 |
 | vp_scaled | 355 | 75.097 | 93.767 | 2433.928 |
 | dwpp | 103 | 71.104 | 87.938 | 1500.553 |
@@ -753,22 +777,106 @@ Generated files (per-trial NPZ/JSON files are Git-ignored):
 
 Computation times measure Python preview, demand and command calculation on the recorded host, excluding noise generation, integration and plotting; they are not a ROS real-time guarantee.
 
-Simulation/cache wall time over 8 execution attempts: 341.7 s (current 13.5 s, 3601 cache hits); source d4b5f9684eb2e128c14fdeba563ad3c72004751f97b6bc675e5c01e6d0a2bfe6; numerical source aa98e75c1f01eb1ae0bf11418d138b39f43e6b5978e80fdfd3eafc38006b9877.
+Simulation/cache wall time over 10 execution attempts: 392.0 s (current 17.2 s, 4241 cache hits); source 6e89233edf743a89f2e4d633c845bfd8e1b06f680bfee0bef7fcf60496e5f6b0; numerical source aa98e75c1f01eb1ae0bf11418d138b39f43e6b5978e80fdfd3eafc38006b9877.
 
 The sampled-path tangent fallback and endpoint limits of the compensation identity are specified in `docs/desired_velocity.md`.
 
-Validation: passed; 3601 conditions, 3468 trajectories; runtime 147.0 s.
+Current run including figure regeneration: 29.5 s.
 
-Pytest: 93 passed in 3.97s
+Regenerated figures (each stem has PDF and PNG outputs; labels use τy without the response distance):
+
+- `test1/test1_crossing_vs_response.{pdf,png}`
+- `test1/test1_response_L0p11_lateral.{pdf,png}`
+- `test1/test1_response_L0p165_lateral.{pdf,png}`
+- `test1/test1_response_L0p33_lateral.{pdf,png}`
+- `test1/test1_response_legend.{pdf,png}`
+- `test1/test1_settling_vs_response.{pdf,png}`
+- `test2/test2_arc_paths.{pdf,png}`
+- `test2/test2_incut_vs_lookahead.{pdf,png}`
+- `test2/test2_orientation_vs_lookahead.{pdf,png}`
+- `test3/test3_acceleration_ratio_legend.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p2_heading.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p2_heading_integral.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p2_overshoot.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p3_heading.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p3_heading_integral.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p3_overshoot.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p4_heading.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p4_heading_integral.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p4_overshoot.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p6_heading.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p6_heading_integral.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_0p6_overshoot.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_1_heading.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_1_heading_integral.{pdf,png}`
+- `test3/test3_acceleration_ratio_ramp_1_overshoot.{pdf,png}`
+- `test3/test3_acceleration_time_series_legend.{pdf,png}`
+- `test3/test3_legend.{pdf,png}`
+- `test3/test3_max_heading_vs_rate_ratio.{pdf,png}`
+- `test3/test3_max_orientation_vs_length.{pdf,png}`
+- `test3/test3_prediction_legend.{pdf,png}`
+- `test3/test3_ramp_0_heading.{pdf,png}`
+- `test3/test3_ramp_0_speed.{pdf,png}`
+- `test3/test3_ramp_0_yaw.{pdf,png}`
+- `test3/test3_ramp_0p2_heading.{pdf,png}`
+- `test3/test3_ramp_0p2_speed.{pdf,png}`
+- `test3/test3_ramp_0p2_yaw.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_0p25_signed_heading.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_0p25_speed.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_0p25_yaw.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_1_signed_heading.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_1_speed.{pdf,png}`
+- `test3/test3_ramp_0p3_acceleration_1_yaw.{pdf,png}`
+- `test3/test3_ramp_0p3_heading.{pdf,png}`
+- `test3/test3_ramp_0p3_speed.{pdf,png}`
+- `test3/test3_ramp_0p3_yaw.{pdf,png}`
+- `test3/test3_ramp_0p4_heading.{pdf,png}`
+- `test3/test3_ramp_0p4_speed.{pdf,png}`
+- `test3/test3_ramp_0p4_yaw.{pdf,png}`
+- `test3/test3_ramp_0p5_heading.{pdf,png}`
+- `test3/test3_ramp_0p5_speed.{pdf,png}`
+- `test3/test3_ramp_0p5_yaw.{pdf,png}`
+- `test3/test3_ramp_0p6_heading.{pdf,png}`
+- `test3/test3_ramp_0p6_speed.{pdf,png}`
+- `test3/test3_ramp_0p6_yaw.{pdf,png}`
+- `test3/test3_ramp_0p7_heading.{pdf,png}`
+- `test3/test3_ramp_0p7_speed.{pdf,png}`
+- `test3/test3_ramp_0p7_yaw.{pdf,png}`
+- `test3/test3_ramp_0p8_heading.{pdf,png}`
+- `test3/test3_ramp_0p8_speed.{pdf,png}`
+- `test3/test3_ramp_0p8_yaw.{pdf,png}`
+- `test3/test3_ramp_0p9_heading.{pdf,png}`
+- `test3/test3_ramp_0p9_speed.{pdf,png}`
+- `test3/test3_ramp_0p9_yaw.{pdf,png}`
+- `test3/test3_ramp_1_heading.{pdf,png}`
+- `test3/test3_ramp_1_speed.{pdf,png}`
+- `test3/test3_ramp_1_yaw.{pdf,png}`
+- `test3/test3_rate_limit_legend.{pdf,png}`
+- `test4/test4_cost0_approach1_distance_speed.{pdf,png}`
+- `test4/test4_cost0_approach1_speed.{pdf,png}`
+- `test4/test4_cost0_approach1_yaw.{pdf,png}`
+- `test4/test4_cost1_approach1_distance_speed.{pdf,png}`
+- `test4/test4_cost1_approach1_speed.{pdf,png}`
+- `test4/test4_cost1_approach1_yaw.{pdf,png}`
+- `test4/test4_legend.{pdf,png}`
+- `test4/test4_scene.{pdf,png}`
+- `test5/test5_noise_orientation.{pdf,png}`
+- `test5/test5_noise_travel_time_vs_lookahead.{pdf,png}`
+- `test5/test5_noise_travel_time_vs_lookahead_xy_only.{pdf,png}`
+- `test5/test5_noise_travel_time_vs_response.{pdf,png}`
+- `test5/test5_noise_travel_time_vs_response_xy_only.{pdf,png}`
+- `test5/test5_noise_travel_time_vs_response_yaw_only.{pdf,png}`
+- `test5/test5_orientation_vs_lookahead.{pdf,png}`
+
+Validation: passed; 4241 conditions, 4028 trajectories; runtime 166.1 s.
+
+Pytest: 95 passed in 3.83s
 
 Changed/new source, configuration, documentation and test files:
 
 - `README.md`
-- `configs/access_v3.yaml`
-- `docs/desired_velocity.md`
 - `src/omnidirectional_dwvp/access_v3.py`
 - `src/omnidirectional_dwvp/access_v3_outputs.py`
-- `src/omnidirectional_dwvp/config.py`
 - `tests/test_access_v3.py`
 - `tools/validate_access_v3.py`
 
@@ -940,6 +1048,8 @@ Generated files (per-trial NPZ/JSON files are Git-ignored):
 - `test5/test5_noise_orientation.png`
 - `test5/test5_noise_travel_time_vs_lookahead.pdf`
 - `test5/test5_noise_travel_time_vs_lookahead.png`
+- `test5/test5_noise_travel_time_vs_lookahead_xy_only.pdf`
+- `test5/test5_noise_travel_time_vs_lookahead_xy_only.png`
 - `test5/test5_noise_travel_time_vs_response.pdf`
 - `test5/test5_noise_travel_time_vs_response.png`
 - `test5/test5_noise_travel_time_vs_response_xy_only.pdf`

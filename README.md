@@ -462,4 +462,11 @@ adds position-only noise (0.002, 0.005, 0.01, 0.02 m) and yaw-only noise (0.1, 0
 `travel_time_recovery_xy_only.csv` records the smallest explicit distance within
 10% of its own noise-free mean (all 20 seeds must succeed), and
 `yaw_only_ratios.csv` records the mean travel-time ratios to each setting's own
-noise-free value. See `REPORT.md` for the complete tables and current validation.
+noise-free value. The position-only sweep also covers the base law
+(`response_distance=None`) at fixed L in {0.055, 0.08, 0.11, 0.165, 0.22, 0.33,
+0.44, 0.60 m}, with 20 seeds per setting. Its travel-time figure is
+`test5_noise_travel_time_vs_lookahead_xy_only.{pdf,png}`; base recovery rows use
+`parameter=fixed_lookahead` in `travel_time_recovery_xy_only.csv`, with the same
+paired-baseline and all-seeds-success criterion. All v3 figure labels express
+the lateral response using `tau_y`; the manifest lists every figure stem.
+See `REPORT.md` for the complete tables and current validation.

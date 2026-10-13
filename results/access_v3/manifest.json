@@ -3,7 +3,7 @@
   "planner_version": "access_v3.4",
   "suite": "access_v3",
   "study": "all",
-  "source_sha256": "f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129",
+  "source_sha256": "bc6e8342a2aa326c47d369ac7a1ee8a1908eb2848db55467b339492045ccddde",
   "numerical_source_sha256": "2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f",
   "git_revision": "8d2f19e166c21e7cdc6c62fea02b5cb024ed27f0",
   "python": "3.11.11 (main, Feb 12 2025, 14:51:05) [Clang 19.1.6 ]",
@@ -1758704,5 +1758704,37 @@
         }
       }
     }
+  },
+  "test3_acceleration_axis": {
+    "simulation_runs": 0,
+    "previous_source_sha256": "f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129",
+    "source_sha256": "bc6e8342a2aa326c47d369ac7a1ee8a1908eb2848db55467b339492045ccddde",
+    "angular_acceleration_rad_s2": [
+      0.15,
+      0.3,
+      0.45,
+      0.6,
+      0.9,
+      1.2
+    ],
+    "boundary_rad_s2": 0.39999999999999997,
+    "figures": [
+      "test3/test3_acceleration_ratio_legend",
+      "test3/test3_acceleration_ratio_ramp_0p2_heading",
+      "test3/test3_acceleration_ratio_ramp_0p2_heading_integral",
+      "test3/test3_acceleration_ratio_ramp_0p2_overshoot",
+      "test3/test3_acceleration_ratio_ramp_0p3_heading",
+      "test3/test3_acceleration_ratio_ramp_0p3_heading_integral",
+      "test3/test3_acceleration_ratio_ramp_0p3_overshoot",
+      "test3/test3_acceleration_ratio_ramp_0p4_heading",
+      "test3/test3_acceleration_ratio_ramp_0p4_heading_integral",
+      "test3/test3_acceleration_ratio_ramp_0p4_overshoot",
+      "test3/test3_acceleration_ratio_ramp_0p6_heading",
+      "test3/test3_acceleration_ratio_ramp_0p6_heading_integral",
+      "test3/test3_acceleration_ratio_ramp_0p6_overshoot",
+      "test3/test3_acceleration_ratio_ramp_1_heading",
+      "test3/test3_acceleration_ratio_ramp_1_heading_integral",
+      "test3/test3_acceleration_ratio_ramp_1_overshoot"
+    ]
   }
 }

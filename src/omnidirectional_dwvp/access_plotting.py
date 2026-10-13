@@ -45,18 +45,15 @@ def panel(stem, curves, xlabel, ylabel, reference=None, vertical=None, xscale='l
         ax.axvline(vertical, color='0.35', ls=':', lw=.7)
     ax.set(xlabel=xlabel, ylabel=ylabel, xscale=xscale)
     if xticks is not None:
-        ax.set_xticks(xticks, labels=[f'{x:.2f}' for x in xticks])
+        ax.set_xticks(xticks, labels=[f'{x:g}' for x in xticks])
         ax.minorticks_off()
     ax.grid(alpha=.2, lw=.4)
     save(fig, stem)
 
 
-def legend(stem, methods, ratio_boundary=False):
-    fig = plt.figure(figsize=(5.4 if 'vp_scaled_accel' in methods or ratio_boundary else 3.7, .3))
+def legend(stem, methods):
+    fig = plt.figure(figsize=(5.4 if 'vp_scaled_accel' in methods else 3.7, .3))
     handles = [Line2D([], [], color=COLORS[m], ls=STYLES[m], lw=1., label=LABELS[m]) for m in methods]
-    if ratio_boundary:
-        handles.append(Line2D([], [], color='0.35', ls=':', lw=.7,
-                              label=r'$\rho=2$'))
     fig.legend(handles=handles, loc='center', ncol=len(handles), frameon=False, borderaxespad=0)
     save(fig, stem)
 
@@ -158,23 +155,24 @@ def figures(output, rows, settings, config):
     if acceleration:
         out = output/'test2'
         methods = HEADING_METHODS
-        legend(out/'acceleration_ratio_legend', methods, ratio_boundary=True)
+        legend(out/'acceleration_ratio_legend', methods)
         for ell in settings['acceleration_transition_lengths']:
             group = [r for r in acceleration if r['parameter']=='acceleration_scale'
                      and r['transition_length_m']==ell and r['method'] in methods]
             if not group:
                 continue
-            ratio = lambda r: r['acceleration_time_w_s']/r['lookahead_time_s']
+            angular_acceleration = lambda r: config.aw*r['value']
             stem = f'acceleration_ratio_ramp_{ell:g}'.replace('.', 'p')
             for metric, suffix, label in (('post_transition_heading_overshoot_deg', 'overshoot', r'$\theta_{\mathrm{os}}$ [deg]'),
                                           ('eval_heading_error_integral_deg_s', 'heading_integral', r'$I_\theta$ [deg$\cdot$s]'),
                                           ('eval_max_heading_error_deg', 'heading', r'$e_{\theta,\max}$ [deg]')):
                 curves = []
                 for method in methods:
-                    series = sorted([r for r in group if r['method']==method], key=ratio)
-                    curves.append((method, [ratio(r) for r in series], [r[metric] for r in series]))
-                panel(out/(stem+'_'+suffix), curves, r'$\rho$', label,
-                      vertical=2., xscale='log', xticks=sorted({ratio(r) for r in group}))
+                    series = sorted([r for r in group if r['method']==method], key=angular_acceleration)
+                    curves.append((method, [angular_acceleration(r) for r in series], [r[metric] for r in series]))
+                panel(out/(stem+'_'+suffix), curves, r'$a_{\omega,\max}$ [rad/s$^2$]', label,
+                      vertical=config.w_max/(2*config.lookahead_time), xscale='log',
+                      xticks=sorted({angular_acceleration(r) for r in group}))
         legend(out/'acceleration_time_series_legend', methods)
         for scale in (.25, 1.):
             group = [r for r in acceleration if r['parameter']=='acceleration_scale' and r['value']==scale

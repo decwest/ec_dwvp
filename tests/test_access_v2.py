@@ -218,7 +218,7 @@ def test_aggregate_retains_timeout_metrics_and_missing_counts():
     assert result['crossing_m_std']==pytest.approx(np.std([.1,.3],ddof=1))
 
 
-def test_heading_grid_plots_ratio_boundary_three_methods_and_post_ramp_times(tmp_path, monkeypatch):
+def test_heading_grid_plots_acceleration_axis_boundary_three_methods_and_post_ramp_times(tmp_path, monkeypatch):
     from omnidirectional_dwvp import access_plotting as plotting
     profile=yaml.safe_load((ROOT/'configs/access_v2.yaml').read_text())
     settings=profile.pop('study')
@@ -247,15 +247,20 @@ def test_heading_grid_plots_ratio_boundary_three_methods_and_post_ramp_times(tmp
     assert len(grids)==15
     for fig in grids.values():
         ax=fig.axes[0]
+        np.testing.assert_allclose(fig.get_size_inches(),[2.3,1.65])
         assert ax.get_xscale()=='log' and ax.get_title()=='' and ax.get_legend() is None
+        assert ax.get_xlabel()==r'$a_{\omega,\max}$ [rad/s$^2$]'
+        np.testing.assert_allclose(ax.get_xticks(),[.15,.3,.45,.6,.9,1.2])
+        assert [tick.get_text() for tick in ax.get_xticklabels()]==['0.15','0.3','0.45','0.6','0.9','1.2']
         assert len(ax.lines)==4
         for line,method in zip(ax.lines[:3],('vp','vp_scaled','dwvp')):
             assert line.get_color()==plotting.COLORS[method]
-            np.testing.assert_allclose(line.get_xdata(),[2/3,8/9,4/3,16/9,8/3,16/3])
-        np.testing.assert_allclose(ax.lines[-1].get_xdata(),[2.,2.])
+            np.testing.assert_allclose(line.get_xdata(),[.15,.3,.45,.6,.9,1.2])
+        np.testing.assert_allclose(ax.lines[-1].get_xdata(),[.4,.4])
         assert ax.lines[-1].get_linestyle()==':'
+        assert ax.lines[-1].get_color()=='0.35'
     np.testing.assert_allclose(captured['acceleration_ratio_ramp_0p3_heading_integral'].axes[0].lines[0].get_ydata(),
-                               [20.,15.,10.,7.5,5.,2.5])
+                               [2.5,5.,7.5,10.,15.,20.])
     for scale in ('0p25','1'):
         for quantity in ('speed','yaw','signed_heading'):
             ax=captured[f'ramp_0p3_acceleration_{scale}_{quantity}'].axes[0]
@@ -266,7 +271,8 @@ def test_heading_grid_plots_ratio_boundary_three_methods_and_post_ramp_times(tmp
             if quantity=='signed_heading':
                 np.testing.assert_allclose(ax.lines[0].get_ydata(),np.rad2deg([0.,-.1,.2,0.]))
     labels=[text.get_text() for text in captured['acceleration_ratio_legend'].legends[0].get_texts()]
-    assert labels[:3]==['Clipped VP','Scaled VP','EC-DWVP'] and len(labels)==4
+    assert labels==['Clipped VP','Scaled VP','EC-DWVP']
+    np.testing.assert_allclose(captured['acceleration_ratio_legend'].get_size_inches(),[3.7,.3])
     assert captured['ramp_0p3_acceleration_1_yaw'].axes[0].get_ylabel()=='Angular velocity [rad/s]'
     assert captured['ramp_0p3_acceleration_1_signed_heading'].axes[0].get_ylabel()=='Signed orientation error [deg]'
     assert plotting.plt.rcParams['pdf.fonttype']==42 and plotting.plt.rcParams['mathtext.fontset']=='stix'

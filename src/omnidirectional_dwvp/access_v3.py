@@ -41,7 +41,9 @@ def plan_conditions(config, settings, seed, selected):
         for response in settings['orientation_responses']:
             add('test2', 'a', rapid, replace(config, fixed_lookahead=look, response_distance=response),
                 parameter='response_distance', value=response)
-    arc = dict(name='arc', kind='arc', radius=settings['arc_radius'], length=settings['arc_length'])
+    arc = dict(name='straight_arc', kind='straight_arc', straight_in=settings['arc_straight_in'],
+               radius=settings['arc_radius'], angle_deg=settings['arc_angle_deg'],
+               straight_out=settings['arc_straight_out'])
     for look in settings['response_lookaheads']:
         for response in settings['arc_responses']:
             add('test2', 'b', arc, replace(config, fixed_lookahead=look, response_distance=response),

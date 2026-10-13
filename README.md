@@ -425,7 +425,7 @@ qualifications, the correction to the brief, telemetry, and the generated
 | v3 study | Conditions before travel-time search | Purpose |
 |---|---:|---|
 | `test1` | 30 | Three fixed previews × four response distances, null base, DWPP, and separate clipped-VP comparison |
-| `test2` | 30 | Orientation preview (18), CCW radius-1 m arc (12) |
+| `test2` | 30 | Orientation preview (18), straight 2 m / CCW radius-1 m 90° arc / tangent straight 2 m (12) |
 | `test3` | 132 | v2 Test 2 constraints, excluding `vp_scaled_accel` |
 | `test4` | 4 | v2 Test 3 obstacle regulation |
 | `test5` | 3384 + search | 2400 original noise trials, 960 position-only/yaw-only trials (20 seeds per condition), 24 rapid-ramp preview trials, and the unchanged v2 travel-time matching search |
@@ -435,6 +435,13 @@ The v3 profile keeps v2's demand at 0.22 m/s, nominal box-speed cap, 0.75 s adap
 preview bounded to 0.11–0.33 m, and 30 Hz control. The complete study grid is in
 `configs/access_v3.yaml`. The `study.suite` field selects the versioned planner;
 existing v2 commands and `configs/access_v2.yaml` remain available.
+
+Test 2(b) starts with zero pose error on the incoming straight. It measures
+`entry_incut_m` (maximum signed lateral error during the arc) and `exit_bulge_m`
+(minimum after the arc), selecting both intervals by the closest projection’s
+arclength. The left normal is positive, so inward arc deviation is positive and
+outward exit deviation is negative. The full-run metrics remain available;
+the lateral-error figure excludes the final 0.5 m and shows no incut prediction.
 
 ```bash
 mkdir -p build/uv-cache build/matplotlib build/tmp

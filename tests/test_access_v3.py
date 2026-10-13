@@ -10,10 +10,10 @@ from omnidirectional_dwvp.config import Config
 from omnidirectional_dwvp.controller import desired_vector, preview_target, compute_command, response_direction
 from omnidirectional_dwvp.geometry import wrap
 from omnidirectional_dwvp.metrics import project_reference, signed_lateral_errors
-from omnidirectional_dwvp.paths import straight_path, arc_path
-from omnidirectional_dwvp.simulation import simulate
+from omnidirectional_dwvp.paths import straight_path, arc_path, straight_arc_path, straight_arc_bounds
+from omnidirectional_dwvp.simulation import Result, simulate
 from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
-from omnidirectional_dwvp.access_v3_metrics import fitted_time_constant
+from omnidirectional_dwvp.access_v3_metrics import fitted_time_constant, extra_metrics, reference_arclength
 from omnidirectional_dwvp.access_v3_outputs import recovery_summary, yaw_ratios
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -210,6 +210,86 @@ def test_arc_path_limits_and_endpoint():
     for values in ((0,1,.01),(1,7,.01),(1,1,0)):
         with pytest.raises(ValueError):
             arc_path(*values)
+
+
+def test_straight_arc_endpoint_and_spacing():
+    path = straight_arc_path()
+    entry, exit = straight_arc_bounds()
+    assert (entry, exit) == (2., 2. + math.pi/2)
+    np.testing.assert_allclose(path[0], [0., 0., 0.])
+    np.testing.assert_allclose(path[-1], [3., 3., math.pi/2])
+    # Recover analytic arclength from the coordinates and tangent headings.
+    s = np.where(path[:, 2] == 0., path[:, 0],
+                 np.where(path[:, 2] < math.pi/2, entry + path[:, 2], exit + path[:, 1] - 1.))
+    np.testing.assert_allclose(np.diff(s)[:-1], .005, atol=1e-14)
+    assert 0 < s[-1]-s[-2] <= .005
+    assert np.all(np.linalg.norm(np.diff(path[:, :2], axis=0), axis=1) > 0)
+    # Non-default geometry also ends along the outgoing tangent.
+    path = straight_arc_path(1., 2., 60., 3., .007)
+    angle = math.pi/3
+    np.testing.assert_allclose(path[-1], [1+2*math.sin(angle)+3*math.cos(angle),
+                                        2*(1-math.cos(angle))+3*math.sin(angle), angle])
+
+
+def test_straight_arc_join_tangents():
+    # Choose a spacing putting both joins on the global sample grid.
+    spacing = math.pi/2000
+    path = straight_arc_path(400*spacing, 1., 90., 400*spacing, spacing)
+    segment_heading = np.arctan2(*np.diff(path[:, :2], axis=0)[:, ::-1].T)
+    for index, heading in ((400, 0.), (1400, math.pi/2)):
+        assert path[index, 2] == pytest.approx(heading, abs=1e-14)
+        np.testing.assert_allclose(segment_heading[index-1:index+1], heading, atol=spacing/2+1e-12)
+    np.testing.assert_allclose(path[400, :2], [400*spacing, 0.])
+    np.testing.assert_allclose(path[1400, :2], [400*spacing+1, 1.])
+
+
+@pytest.mark.parametrize('parameter,value', [('straight_in', 0), ('radius', -1),
+    ('angle_deg', 361), ('angle_deg', float('nan')), ('straight_out', float('inf')), ('spacing', 0)])
+def test_straight_arc_invalid_geometry(parameter, value):
+    with pytest.raises(ValueError):
+        straight_arc_path(**{parameter: value})
+
+
+def test_straight_arc_metrics_use_projected_arclength():
+    path = straight_arc_path()
+    segments = np.array([100, 450, 520, 600, 730, 850, 950])
+    offsets = np.array([.5, .04, -.2, .12, -.07, .3, -.02])
+    delta = path[segments+1, :2] - path[segments, :2]
+    tangent = delta / np.linalg.norm(delta, axis=1)[:, None]
+    normal = np.c_[-tangent[:, 1], tangent[:, 0]]
+    xy = (path[segments, :2]+path[segments+1, :2])/2 + offsets[:, None]*normal
+    poses = np.c_[xy, np.zeros(len(xy))]
+    ref, _, _, indices, fractions = project_reference(poses, path)
+    arrays = dict(path=path, poses=poses, reference_segment=indices, reference_fraction=fractions,
+                  signed_lateral_errors=signed_lateral_errors(poses, path, ref, indices),
+                  response_rules=np.zeros(len(poses)-1, dtype=int),
+                  travel_distance=np.arange(len(poses))*10.)
+    scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
+    metrics = extra_metrics(Result(arrays, {}, {}), Config(), scene)
+    assert metrics['entry_incut_m'] == pytest.approx(.12)
+    assert metrics['exit_bulge_m'] == pytest.approx(-.07)
+    assert metrics['max_abs_signed_lateral_error_m'] == pytest.approx(.5)
+    assert metrics['incut_prediction_m'] is metrics['incut_relative_deviation'] is None
+    assert metrics['steady_lateral_error_m'] is None
+    lengths = np.linalg.norm(np.diff(path[:, :2], axis=0), axis=1)
+    expected_s = np.cumsum(np.r_[0., lengths])[segments] + lengths[segments]/2
+    np.testing.assert_allclose(reference_arclength(arrays), expected_s, atol=1e-14)
+    # A run ending before entry has no arc or exit observations.
+    for key in ('reference_segment', 'reference_fraction', 'signed_lateral_errors'):
+        arrays[key] = arrays[key][:1]
+    arrays['response_rules'] = np.array([], dtype=int)
+    metrics = extra_metrics(Result(arrays, {}, {}), Config(), scene)
+    assert metrics['entry_incut_m'] is metrics['exit_bulge_m'] is None
+
+
+def test_v3_preview_uses_straight_arc_scene():
+    cfg, settings = profile()
+    conditions = [c for c in plan_conditions(cfg, settings, 0, ('test2',)) if c['part']=='b']
+    assert len(conditions) == 12
+    assert all(c['scenario'] == dict(name='straight_arc', kind='straight_arc', straight_in=2.,
+                                    radius=1., angle_deg=90., straight_out=2.) for c in conditions)
+    assert {(c['config']['fixed_lookahead'], c['config']['response_distance']) for c in conditions} == {
+        (look, response) for look in (.11, .165, .33) for response in (.11, .165, .33, None)}
 
 
 @pytest.mark.parametrize('parameter', ['response_distance', 'fixed_lookahead'])

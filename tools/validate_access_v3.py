@@ -148,7 +148,8 @@ def validate(root,study='all'):
         expected_stems += ['test1/test1_response_L'+v+'_lateral' for v in ('0p11','0p165','0p33')]
         expected_stems += ['test1/test1_'+s for s in ('response_legend','settling_vs_response','crossing_vs_response')]
     if 'test2' in selected:
-        expected_stems += ['test2/test2_'+s for s in ('orientation_vs_lookahead','incut_vs_lookahead','arc_paths')]
+        expected_stems += ['test2/test2_'+s for s in ('orientation_response','orientation_vs_lookahead',
+                                                    'incut_vs_lookahead','arc_lateral_error','arc_paths','legend')]
     if 'test3' in selected:
         expected_stems += ['test3/test3_acceleration_ratio_ramp_'+v+'_'+s for v in ('1','0p6','0p4','0p3','0p2') for s in ('overshoot','heading_integral','heading')]
         expected_stems += ['test3/test3_ramp_0p3_acceleration_'+v+'_'+s for v in ('0p25','1') for s in ('speed','yaw','signed_heading')]
@@ -207,6 +208,7 @@ def validate(root,study='all'):
                     r[k]=float(r[k]) if r[k] else None
                 predictions.append(r)
     report(root,rows,manifest,grouped,recovery,predictions)
+    assert len((root/'REPORT.md').read_text().splitlines()) <= 240
     print(json.dumps(validation,indent=2))
     return validation
 

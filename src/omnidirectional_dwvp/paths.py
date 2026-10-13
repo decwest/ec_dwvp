@@ -159,6 +159,34 @@ def arc_path(radius=1.0, length=3.0, spacing=0.005):
     return np.c_[radius * np.sin(theta), radius * (1 - np.cos(theta)), theta]
 
 
+def straight_arc_bounds(straight_in=2.0, radius=1.0, angle_deg=90.0):
+    """Analytic arclengths at the CCW arc entry and exit."""
+    return straight_in, straight_in + radius * math.radians(angle_deg)
+
+
+def straight_arc_path(straight_in=2.0, radius=1.0, angle_deg=90.0,
+                      straight_out=2.0, spacing=0.005):
+    """Tangent-connected straight/CCW arc/straight, sampled in analytic arclength.
+
+    The global spacing is constant except for the final endpoint interval.
+    Heading is the analytic tangent; curvature changes abruptly at both joins.
+    """
+    values = (straight_in, radius, angle_deg, straight_out, spacing)
+    if not all(math.isfinite(v) for v in values) or min(values) <= 0:
+        raise ValueError('lengths, radius, angle and spacing must be finite and positive')
+    if angle_deg > 360:
+        raise ValueError('arc angle must not exceed one circumference')
+    entry, exit = straight_arc_bounds(straight_in, radius, angle_deg)
+    end = exit + straight_out
+    s = np.r_[np.arange(0., end, spacing), end]
+    angle = math.radians(angle_deg)
+    theta = np.clip((s - entry) / radius, 0., angle)
+    after = np.maximum(s - exit, 0.)
+    x = np.minimum(s, entry) + radius * np.sin(theta) + after * math.cos(angle)
+    y = radius * (1 - np.cos(theta)) + after * math.sin(angle)
+    return np.c_[x, y, theta]
+
+
 def orientation_ramp_path(transition_length, length=4.0, spacing=0.005, start=1.0):
     """Straight x-axis path with independent yaw 0 to pi/2; zero length is a step.
 

@@ -11,7 +11,7 @@ import traceback
 import numpy as np
 from .config import Config
 from .geometry import Obstacle
-from .paths import straight_path, orientation_ramp_path, arc_path
+from .paths import straight_path, orientation_ramp_path, arc_path, straight_arc_path
 from .simulation import Result, simulate
 from .access_metrics import evaluate, aggregate
 from .studies import ROOT, code_hash, sha, git_revision, cpu_model, write_csv
@@ -126,6 +126,9 @@ def execute_trial(condition, output, numerical_source_hash, force=False, reuse=N
             if scene['kind']=='ramp' else straight_path(condition['path_length'], condition['path_spacing']))
     if scene['kind'] == 'arc':
         path = arc_path(scene['radius'], scene['length'], condition['path_spacing'])
+    if scene['kind'] == 'straight_arc':
+        path = straight_arc_path(scene['straight_in'], scene['radius'], scene['angle_deg'],
+                                 scene['straight_out'], condition['path_spacing'])
     initial = [0., scene.get('offset', 0.), 0.]
     obstacles = tuple(Obstacle(*o) for o in condition['obstacles'])
     spec = dict(method=condition['method'], config=asdict(cfg), seed=condition['seed'], initial_pose=initial,

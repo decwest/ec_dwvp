@@ -266,7 +266,7 @@ def test_heading_grid_plots_ratio_boundary_three_methods_and_post_ramp_times(tmp
             if quantity=='signed_heading':
                 np.testing.assert_allclose(ax.lines[0].get_ydata(),np.rad2deg([0.,-.1,.2,0.]))
     labels=[text.get_text() for text in captured['acceleration_ratio_legend'].legends[0].get_texts()]
-    assert labels[:3]==['Clipped VP','Scaled VP','DWVP'] and len(labels)==4
+    assert labels[:3]==['Clipped VP','Scaled VP','EC-DWVP'] and len(labels)==4
     assert captured['ramp_0p3_acceleration_1_yaw'].axes[0].get_ylabel()=='Angular velocity [rad/s]'
     assert captured['ramp_0p3_acceleration_1_signed_heading'].axes[0].get_ylabel()=='Signed orientation error [deg]'
     assert plotting.plt.rcParams['pdf.fonttype']==42 and plotting.plt.rcParams['mathtext.fontset']=='stix'

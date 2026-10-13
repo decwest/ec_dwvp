@@ -1,6 +1,7 @@
 """Additional response/arc metrics; all existing full-motion metrics stay intact."""
 import numpy as np
 from .controller import desired_vector, preview_target
+from .paths import straight_arc_bounds
 from .studies import sha
 
 
@@ -18,10 +19,19 @@ def angle_degrees(a, b):
     return float(np.rad2deg(np.arctan2(abs(a[0]*b[1]-a[1]*b[0]), a @ b))) if scale > 1e-20 else None
 
 
+def reference_arclength(arrays):
+    """Polyline arclength of the saved nearest-segment projections."""
+    lengths = np.linalg.norm(np.diff(arrays['path'][:, :2], axis=0), axis=1)
+    starts = np.r_[0., np.cumsum(lengths)]
+    segments = arrays['reference_segment']
+    return starts[segments] + arrays['reference_fraction'] * lengths[segments]
+
+
 def extra_metrics(result, config, scene):
     a = result.arrays
     errors = a['signed_lateral_errors']
     m = dict(tau_fit_s=None, tau_prediction_s=None, steady_lateral_error_m=None,
+             entry_incut_m=None, exit_bulge_m=None,
              incut_prediction_m=None, incut_relative_deviation=None,
              max_abs_signed_lateral_error_m=float(np.abs(errors).max()),
              goal_switch_time_s=None, goal_switch_direction_change_deg=None,
@@ -40,6 +50,13 @@ def extra_metrics(result, config, scene):
         prediction = config.fixed_lookahead * (config.response_distance or config.fixed_lookahead)/(2*scene['radius'])
         m.update(steady_lateral_error_m=steady, incut_prediction_m=prediction,
                  incut_relative_deviation=(steady-prediction)/prediction)
+    if scene['kind'] == 'straight_arc':
+        entry, exit = straight_arc_bounds(scene['straight_in'], scene['radius'], scene['angle_deg'])
+        s = reference_arclength(a)
+        inside = (s >= entry) & (s <= exit)
+        after = s > exit
+        m.update(entry_incut_m=float(errors[inside].max()) if inside.any() else None,
+                 exit_bulge_m=float(errors[after].min()) if after.any() else None)
     rules = a['response_rules']
     switches = np.flatnonzero((rules == 3) & np.r_[True, rules[:-1] != 3])
     if len(switches):

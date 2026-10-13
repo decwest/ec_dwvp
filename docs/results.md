@@ -37,8 +37,19 @@ Clipped VP uses the same compensated demand but changes the transient: at
 three response distances it settles 0.367–0.500 s later and accumulates more
 position error. Thus these data do not imply a universal advantage for DWVP.
 
-On the CCW radius-1 m arc, the signed middle-third offsets differ from
-`L*D_y/(2R)` (or `L²/(2R)` for the null base) by −0.916% to +2.270%.
+Test 2(b) starts at the origin with zero pose error and follows a 2 m straight,
+a CCW 90° arc of radius 1 m, and a 2 m outgoing tangent straight, without
+transition curves. `entry_incut_m` is the maximum signed lateral error while
+the closest projection’s arclength lies from 2 m through 2 + π/2 m;
+`exit_bulge_m` is the minimum signed error after that interval. The closest
+segment’s left normal defines the sign: inward arc error is positive and
+outward exit error is negative. The intervals use projected reference
+arclength, not robot travel distance. The report gives the 12 combinations of
+L and response setting; the lateral-error panel at L=0.33 m marks entry and
+exit and omits the final 0.5 m of goal approach.
+Across this grid, entry incut ranges from 0.006062 to 0.054929 m and increases
+with L at each response setting. Exit minima range from −2.01×10⁻⁸ to
+1.51×10⁻⁵ m; these runs do not show a substantial outward exit bulge.
 All 30 Test 1 conditions and all 30 Test 2 conditions reach the settled goal.
 For `L=0.11 m, D_y=0.33 m`, the goal preview rule starts at 20.7 s and is used
 for 76 command cycles before five terminal cycles; the successive-demand

@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "previous_source_sha256": "4cb587dd9b014c361d516455d15fa0f8440e3d79eb758228541df6b1663e69ab",
+  "source_sha256": "ce65edd69c52368f653f48491fab4419a1a60564f4eb1b0ee7bd4d6701681734",
+  "comparison": "Exact equality of every pre-existing summary field except trial_id; only Test 2(b) has new fields.",
+  "unchanged_conditions_by_test": {
+    "test1": 30,
+    "test2(a)": 18,
+    "test2(b)": 12,
+    "test3": 132,
+    "test4": 4,
+    "test5": 4045
+  },
+  "unchanged_summary_fields": 555390,
+  "unchanged_derived_csvs": [
+    "test5/noise_summary.csv",
+    "test5/yaw_only_ratios.csv",
+    "test5/travel_time_recovery.csv",
+    "test5/travel_time_recovery_xy_only.csv",
+    "test3/overshoot_prediction.csv"
+  ],
+  "unchanged_figure_files": 170,
+  "pdf_creation_dates_preserved": 85,
+  "protected_v2_files_unchanged": 17251
+}

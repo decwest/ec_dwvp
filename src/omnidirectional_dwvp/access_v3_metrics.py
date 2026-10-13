@@ -57,6 +57,20 @@ def extra_metrics(result, config, scene):
         after = s > exit
         m.update(entry_incut_m=float(errors[inside].max()) if inside.any() else None,
                  exit_bulge_m=float(errors[after].min()) if after.any() else None)
+        reaction = np.flatnonzero((s < entry) & (errors > .001))
+        m['entry_reaction_m'] = float(entry-s[reaction[0]]) if len(reaction) else 0.
+        m['exit_tau_fit_s'] = None
+        end = np.linalg.norm(np.diff(a['path'][:, :2], axis=0), axis=1).sum()
+        candidates = np.flatnonzero((s >= exit) & (s < end-config.approach_distance))
+        if len(candidates):
+            # The first saved sample at/after exit defines the reference magnitude.
+            magnitude = np.abs(errors[candidates])
+            fit = candidates[(magnitude >= .05*magnitude[0]) &
+                             (magnitude <= .9*magnitude[0]) & (magnitude > 0)]
+            if len(fit) > 5:
+                slope = np.polyfit(a['times'][fit], np.log(np.abs(errors[fit])), 1)[0]
+                if slope < 0:
+                    m['exit_tau_fit_s'] = float(-1./slope)
     rules = a['response_rules']
     switches = np.flatnonzero((rules == 3) & np.r_[True, rules[:-1] != 3])
     if len(switches):

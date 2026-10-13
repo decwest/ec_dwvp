@@ -333,6 +333,30 @@ def fmt(value, digits=3):
     return str(value)
 
 
+def arc_table(output, rows):
+    """Booktabs fragment for the Test 2(b) preview/response comparison."""
+    arcs = [r for r in rows if r['test']=='test2' and r['part']=='b']
+    if not arcs:
+        return
+    looks = sorted({r['fixed_lookahead_m'] for r in arcs})
+    responses = sorted({r['response_distance_m'] for r in arcs}, key=lambda d: (d is None, d or 0.))
+    n = len(looks)
+    headings = [rf'${"L=" if i == 0 else ""}{look:g}$'+('~m' if i == n-1 else '')
+                for i, look in enumerate(looks)]
+    lines = [r'\begin{tabular}{l'+'r'*(2*n)+'}', r'\toprule',
+             r'$\tau_y$ [s] & '+rf'\multicolumn{{{n}}}{{c}}{{$e_{{\mathrm{{in}}}}$ [m]}} & '
+             +rf'\multicolumn{{{n}}}{{c}}{{$\hat{{\tau}}_{{y,\mathrm{{out}}}}$ [s]}}'+r' \\',
+             ' & '+' & '.join(headings*2)+r' \\', r'\midrule']
+    for response in responses:
+        group = sorted([r for r in arcs if r['response_distance_m']==response], key=lambda r:r['fixed_lookahead_m'])
+        title = r"Base ($L'/v_{\mathrm{des}}$)" if response is None else f"{group[0]['tau_y_s']:g}"
+        values = ['--' if r[key] is None else f'{r[key]:.{digits}f}'
+                  for key, digits in [('entry_incut_m', 3), ('exit_tau_fit_s', 2)] for r in group]
+        lines.append(' & '.join([title, *values])+r' \\')
+    lines.extend([r'\bottomrule', r'\end{tabular}'])
+    (output/'test2'/'test2_arc_table.tex').write_text('\n'.join(lines)+'\n')
+
+
 def report(output, rows, manifest, grouped, recovery, predictions):
     config = Config(**manifest['config'])
     lines = ['# access_v3 results', '',
@@ -340,7 +364,8 @@ def report(output, rows, manifest, grouped, recovery, predictions):
              f"{sum(r['success'] for r in rows)} successes, {sum(r['status']=='timeout' for r in rows)} timeouts, "
              f"{sum(r['status'] not in ('success','timeout') for r in rows)} errors/collisions.", '',
              'All errors cover start through settled goal arrival or timeout. Failed travel times and 2% settling times are undefined; noise recovery requires all 20 seeds to succeed. Complete per-condition metrics remain in each test’s `summary.csv`.', '',
-             'Signed lateral error uses the closest segment’s left normal. For straight–arc–straight paths, entry_incut_m is the maximum signed error over projected arclength entry ≤ s ≤ exit; exit_bulge_m is the minimum for s > exit. Positive error is inside the CCW arc; negative error after exit is outside. Arclength is reconstructed from reference_segment and reference_fraction on the sampled polyline, not robot travel distance.', '']
+             'Signed lateral error uses the closest segment’s left normal. For straight–arc–straight paths, entry_incut_m is the maximum signed error over projected arclength entry ≤ s ≤ exit; exit_bulge_m is the minimum for s > exit. Positive error is inside the CCW arc; negative error after exit is outside. Arclength is reconstructed from reference_segment and reference_fraction on the sampled polyline, not robot travel distance.', '',
+             'entry_reaction_m is entry minus the projected arclength of the first saved sample before entry with signed error > 0.001 m, or zero if none exists. exit_tau_fit_s is −1/slope from a least-squares fit of log|e| versus time, using exit ≤ s < polyline length − approach_distance (0.6 m here) and 5–90% of the error magnitude at the first saved sample at/after exit. Fits with at most five samples, zero reference error or nonnegative slope are undefined; neither metric interpolates threshold crossings.', '']
 
     def heading(title):
         lines.extend(['## '+title, ''])
@@ -383,12 +408,18 @@ def report(output, rows, manifest, grouped, recovery, predictions):
         entry, exit = straight_arc_bounds(settings['arc_straight_in'], settings['arc_radius'], settings['arc_angle_deg'])
         lines.extend([f"The reference starts at (0, 0) with zero pose error: a +x straight of {entry:g} m, a CCW {settings['arc_angle_deg']:g}° arc of radius {settings['arc_radius']:g} m, and an outgoing tangent straight of {settings['arc_straight_out']:g} m. There are no transition curves. Tangent heading is continuous; the analytic arclength spacing is {settings['path_spacing']:g} m with the endpoint included.", '',
                       f'Entry and exit arclengths are {entry:g} m and {exit:.9f} m. The entry and exit extrema use the projected-arclength intervals defined above, over the full run. max |e| and eθ,max also cover the full run. Base uses Dy=L′; its tabulated τy=L/v is a small-error label.', ''])
-        table(['L [m]', 'Dy [m]', 'τy [s]', 'entry_incut_m', 'exit_bulge_m', 'max |e| [m]', 'eθ,max [deg]', 'travel [s]', 'goal'],
+        table(['L [m]', 'Dy [m]', 'τy [s]', 'entry_reaction_m', 'exit_tau_fit_s', 'entry_incut_m', 'exit_bulge_m', 'max |e| [m]', 'eθ,max [deg]', 'travel [s]', 'goal'],
               [[r['fixed_lookahead_m'], 'L′ (base)' if r['response_distance_m'] is None else r['response_distance_m'], r['tau_y_s'],
+                fmt(r['entry_reaction_m'], 6), fmt(r['exit_tau_fit_s'], 6),
                 fmt(r['entry_incut_m'], 6), f"{r['exit_bulge_m']:.6g}" if r['exit_bulge_m'] is not None else None,
                 fmt(r['max_abs_signed_lateral_error_m'], 6),
                 r['eval_max_heading_error_deg'], r['travel_time_s'], r['success']]
                for r in second if r['part']=='b'])
+        lines.extend(['LaTeX tabular fragment: [test2/test2_arc_table.tex](test2/test2_arc_table.tex).', ''])
+        arcs = [r for r in second if r['part']=='b']
+        reaction_spread = max(max(g)-min(g) for look in {r['fixed_lookahead_m'] for r in arcs}
+                              for g in [[r['entry_reaction_m'] for r in arcs if r['fixed_lookahead_m']==look]])
+        lines.extend([f'At fixed L, the sampled 1 mm reaction distance varies by up to {reaction_spread:.6f} m across response settings; this threshold metric does not establish exact independence from τy.', ''])
         lines.extend(['Updated figures (PDF and PNG): `test2/test2_arc_lateral_error`, `test2/test2_incut_vs_lookahead`, and `test2/test2_arc_paths` (entry inset). The lateral-error panel uses L=0.33 m and projected arclength from 0.5 m before entry to 0.5 m before the endpoint; dotted vertical lines mark entry and exit. Orientation panels and the shared `test2_legend` retain their definitions and styling.', ''])
     for test, title in (('test3', 'Test 3: constraints'), ('test4', 'Test 4: obstacle speed regulation')):
         group = [r for r in rows if r['test']==test]
@@ -474,6 +505,7 @@ def outputs(output, rows, manifest):
         write_csv(output/'test5'/'yaw_only_ratios.csv', yaw_ratios(grouped))
     write_csv(output/'performance.csv', [dict(trial_id=t['summary']['trial_id'], **json.loads((output/'trials'/t['summary']['trial_id']/'trial.json').read_text())['performance']) for t in manifest['trials']])
     manifest['v2_parity'] = parity(output, manifest)
+    arc_table(output, rows)
     predictions = unchanged_figures(output, rows, manifest)
     figures(output, rows, manifest, grouped)
     manifest['figures'] = [str(p.relative_to(output).with_suffix('')) for p in sorted(output.glob('test*/*.pdf'))]

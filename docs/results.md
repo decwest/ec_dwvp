@@ -47,6 +47,7 @@ outward exit error is negative. The intervals use projected reference
 arclength, not robot travel distance. The report gives the 12 combinations of
 L and response setting; the lateral-error panel at L=0.33 m marks entry and
 exit and omits the final 0.5 m of goal approach.
+`entry_reaction_m` measures the distance before entry at the first saved inward error > 1 mm (zero if absent), and `exit_tau_fit_s` fits log|e| versus time over 5–90% of the first exit-sample magnitude, using exit ≤ projected arclength < polyline length − 0.6 m and more than five samples with a negative slope.
 Across this grid, entry incut ranges from 0.006062 to 0.054929 m and increases
 with L at each response setting. Exit minima range from −2.01×10⁻⁸ to
 1.51×10⁻⁵ m; these runs do not show a substantial outward exit bulge.

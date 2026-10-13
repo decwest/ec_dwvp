@@ -262,6 +262,7 @@ def test_straight_arc_metrics_use_projected_arclength():
     ref, _, _, indices, fractions = project_reference(poses, path)
     arrays = dict(path=path, poses=poses, reference_segment=indices, reference_fraction=fractions,
                   signed_lateral_errors=signed_lateral_errors(poses, path, ref, indices),
+                  times=np.arange(len(poses), dtype=float),
                   response_rules=np.zeros(len(poses)-1, dtype=int),
                   travel_distance=np.arange(len(poses))*10.)
     scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
@@ -275,11 +276,88 @@ def test_straight_arc_metrics_use_projected_arclength():
     expected_s = np.cumsum(np.r_[0., lengths])[segments] + lengths[segments]/2
     np.testing.assert_allclose(reference_arclength(arrays), expected_s, atol=1e-14)
     # A run ending before entry has no arc or exit observations.
-    for key in ('reference_segment', 'reference_fraction', 'signed_lateral_errors'):
+    for key in ('reference_segment', 'reference_fraction', 'signed_lateral_errors', 'times'):
         arrays[key] = arrays[key][:1]
     arrays['response_rules'] = np.array([], dtype=int)
     metrics = extra_metrics(Result(arrays, {}, {}), Config(), scene)
     assert metrics['entry_incut_m'] is metrics['exit_bulge_m'] is None
+    assert metrics['exit_tau_fit_s'] is None
+
+
+def synthetic_arc_result(arclengths, errors, times=None):
+    """Place synthetic poses at signed normal offsets from the sampled path."""
+    path = straight_arc_path()
+    delta = np.diff(path[:, :2], axis=0)
+    lengths = np.linalg.norm(delta, axis=1)
+    starts = np.r_[0., np.cumsum(lengths)]
+    segments = np.searchsorted(starts, arclengths, side='right')-1
+    fractions = (np.asarray(arclengths)-starts[segments])/lengths[segments]
+    tangent = delta[segments]/lengths[segments, None]
+    normal = np.c_[-tangent[:, 1], tangent[:, 0]]
+    xy = path[segments, :2]+fractions[:, None]*delta[segments]+np.asarray(errors)[:, None]*normal
+    poses = np.c_[xy, np.zeros(len(xy))]
+    ref, _, _, segments, fractions = project_reference(poses, path)
+    arrays = dict(path=path, poses=poses, reference_segment=segments, reference_fraction=fractions,
+                  signed_lateral_errors=signed_lateral_errors(poses, path, ref, segments),
+                  times=np.arange(len(poses), dtype=float) if times is None else np.asarray(times),
+                  response_rules=np.zeros(len(poses)-1, dtype=int))
+    return Result(arrays, {}, {})
+
+
+@pytest.mark.parametrize('tau', [.5, .75, 1.5])
+@pytest.mark.parametrize('sign', [-1., 1.])
+def test_exit_tau_fit_recovers_exponential_and_excludes_other_intervals(tau, sign):
+    scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
+    _, exit = straight_arc_bounds()
+    path = straight_arc_path()
+    end = np.linalg.norm(np.diff(path[:, :2], axis=0), axis=1).sum()
+    # All timestamps exceed Test 1's 20 s cutoff. Pre-exit, >90%, <5%, and
+    # goal-approach samples deliberately do not follow the fitted exponential.
+    fit_times = np.linspace(0., 2*tau, 25)
+    s = np.r_[exit-.02, exit+.01, exit+.015, exit+np.linspace(.02, 1.1, 25),
+              exit+1.2, end-.59, end-.3, end-.1]
+    errors = sign*np.r_[.025, .1, .095, .08*np.exp(-fit_times/tau), .004, .04, .03, .02]
+    times = 25+np.r_[0., .1, .2, .4+fit_times, 1+2*tau, 2+2*tau, 3+2*tau, 4+2*tau]
+    result = synthetic_arc_result(s, errors, times)
+    metrics = extra_metrics(result, Config(approach_distance=.6), scene)
+    assert metrics['exit_tau_fit_s'] == pytest.approx(tau, rel=1e-11)
+    # Enlarging the excluded goal region leaves too few samples for a fit.
+    assert extra_metrics(result, Config(approach_distance=1.98), scene)['exit_tau_fit_s'] is None
+
+
+@pytest.mark.parametrize('count', [5, 6])
+def test_exit_tau_fit_requires_more_than_five_samples(count):
+    scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
+    _, exit = straight_arc_bounds()
+    times = np.arange(count+1)*.2
+    result = synthetic_arc_result(exit+.01+times*.1, .02*np.exp(-times/.75), times)
+    tau = extra_metrics(result, Config(), scene)['exit_tau_fit_s']
+    if count == 5:
+        assert tau is None
+    else:
+        assert tau == pytest.approx(.75, rel=1e-11)
+
+
+@pytest.mark.parametrize('errors', [np.zeros(8), np.r_[.02, np.linspace(.002, .016, 7)]])
+def test_exit_tau_fit_undefined_for_zero_reference_or_nondecaying_fit(errors):
+    scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
+    _, exit = straight_arc_bounds()
+    result = synthetic_arc_result(exit+np.linspace(.01, .5, len(errors)), errors)
+    assert extra_metrics(result, Config(), scene)['exit_tau_fit_s'] is None
+
+
+@pytest.mark.parametrize('errors,expected', [
+    ([-.02, .001, .0011, .004, .01], .1),
+    ([-.02, .001, .0005, .0009, .01], 0.),
+])
+def test_entry_reaction_uses_first_strict_inward_threshold_before_entry(errors, expected):
+    scene = dict(kind='straight_arc', straight_in=2., radius=1., angle_deg=90., straight_out=2.)
+    result = synthetic_arc_result([1.5, 1.7, 1.9, 1.99, 2.1], errors)
+    # Accumulated robot travel is unrelated to the required projected arclength.
+    result.arrays['travel_distance'] = np.arange(5)*10.
+    metrics = extra_metrics(result, Config(), scene)
+    assert metrics['entry_reaction_m'] == pytest.approx(expected, abs=1e-14)
+    assert metrics['exit_tau_fit_s'] is None
 
 
 def test_v3_preview_uses_straight_arc_scene():

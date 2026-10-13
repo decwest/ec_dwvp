@@ -200,12 +200,12 @@ Current run including figure regeneration: 45.2 s.
 
 Immediately preceding run: simulation/cache 60.0 s; including figures 72.2 s. Complete timing history is in the manifest.
 
-Validation: passed; 5841 conditions, 5424 trajectories; runtime 212.1 s; 17251 protected files unchanged.
+Validation: passed; 5841 conditions, 5424 trajectories; runtime 212.4 s; 17251 protected files unchanged.
 
-Pytest: 124 passed in 4.19s
+Pytest: 125 passed in 4.41s
 
 Source SHA-256: `f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129`; numerical source: `2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f`.
 
-All 85 PDF/PNG figure pairs are listed in [manifest.json](manifest.json). Per-trial histories under `trials/` are Git-ignored. The compensation identity and endpoint limits are in `docs/desired_velocity.md`.
+All 87 PDF/PNG figure pairs are listed in [manifest.json](manifest.json). Per-trial histories under `trials/` are Git-ignored. The compensation identity and endpoint limits are in `docs/desired_velocity.md`.
 
-Changed source, configuration, documentation and tests: `src/omnidirectional_dwvp/access_v3.py`, `src/omnidirectional_dwvp/access_v3_outputs.py`, `tests/test_access_v3.py`, `tools/validate_access_v3.py`.
+Changed source, configuration, documentation and tests: `README.md`, `tools/validate_access_v3.py`, `tests/test_pose_strobe.py`, `tools/plot_test3_pose_strobe.py`.

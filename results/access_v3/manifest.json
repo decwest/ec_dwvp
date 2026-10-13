@@ -1758594,6 +1758594,8 @@
     "test3/test3_legend",
     "test3/test3_max_heading_vs_rate_ratio",
     "test3/test3_max_orientation_vs_length",
+    "test3/test3_pose_strobe_rho1p33",
+    "test3/test3_pose_strobe_rho5p33",
     "test3/test3_prediction_legend",
     "test3/test3_ramp_0_heading",
     "test3/test3_ramp_0_speed",
@@ -1758648,5 +1758650,59 @@
     "test5/test5_noise_travel_time_vs_response_yaw_only",
     "test5/test5_orientation_vs_lookahead"
   ],
-  "total_wall_time_s": 45.18053807003889
+  "total_wall_time_s": 45.18053807003889,
+  "test3_pose_strobe": {
+    "simulation_runs": 0,
+    "interval_s": 0.5,
+    "transition_length_m": 0.3,
+    "script_sha256": "c584e62f7eea56e6f83a6e2c7444d93ba1c6fec1690248335da13a1c8245ce52",
+    "figures": {
+      "test3/test3_pose_strobe_rho1p33": {
+        "acceleration_scale": 1.0,
+        "methods": {
+          "vp": {
+            "trial_id": "91ec70ecf3c59bcc77347ef61bd085989ce051c51bbbf483c3bda3f0d8fd37fb",
+            "first_time_s": 3.0,
+            "last_time_s": 11.5,
+            "count": 18
+          },
+          "vp_scaled": {
+            "trial_id": "bafe03455e4a34fbc857b9245e1671888b946f87422bacbd034ae1085650f7e5",
+            "first_time_s": 3.0,
+            "last_time_s": 12.5,
+            "count": 20
+          },
+          "dwvp": {
+            "trial_id": "e35b1bad127a36ef12475fff1731c9b371a311a7fdd20bf80ea00b7613179222",
+            "first_time_s": 3.0,
+            "last_time_s": 12.5,
+            "count": 20
+          }
+        }
+      },
+      "test3/test3_pose_strobe_rho5p33": {
+        "acceleration_scale": 0.25,
+        "methods": {
+          "vp": {
+            "trial_id": "a78d1f163bee648abca9a642bd6077fb0187a5da17e0ee5850146c137f1d7c11",
+            "first_time_s": 4.5,
+            "last_time_s": 23.0,
+            "count": 38
+          },
+          "vp_scaled": {
+            "trial_id": "8692f8081d5f180f282925ca702388a4bd6fe4251e743ea683bcf25eb2388c5b",
+            "first_time_s": 4.5,
+            "last_time_s": 18.0,
+            "count": 28
+          },
+          "dwvp": {
+            "trial_id": "37b1ce20f64f647df36d10a91c2c8f47996c22cb6a6c0db3d11a63901ca761c3",
+            "first_time_s": 4.5,
+            "last_time_s": 17.0,
+            "count": 26
+          }
+        }
+      }
+    }
+  }
 }

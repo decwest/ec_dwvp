@@ -447,6 +447,7 @@ the lateral-error figure excludes the final 0.5 m and shows no incut prediction.
 mkdir -p build/uv-cache build/matplotlib build/tmp
 export UV_CACHE_DIR="$PWD/build/uv-cache" MPLCONFIGDIR="$PWD/build/matplotlib" TMPDIR="$PWD/build/tmp" PYTHONDONTWRITEBYTECODE=1
 uv run --offline --locked --python 3.11.11 dwvp-study all --config configs/access_v3.yaml --output results/access_v3 --seed 0 --workers 4
+uv run --offline --locked --python 3.11.11 python tools/plot_test3_pose_strobe.py results/access_v3
 uv run --offline --locked --python 3.11.11 pytest -q --basetemp=build/pytest-tmp > results/access_v3/pytest.txt
 uv run --offline --locked --python 3.11.11 python tools/validate_access_v3.py results/access_v3
 ```
@@ -459,6 +460,17 @@ v2 parity evidence. The v3 validator compares all 136 Test 3/4 conditions agains
 saved v2 arrays and common metrics without modifying v2 files. It also checks
 coverage, true-pose errors, command constraints, goal/settling definitions,
 response-rule counts, portable fixtures, noise aggregates and rendered assets.
+
+Regenerate only the two Test 3 pose-strobe PDF/PNG pairs from saved trajectories:
+`uv run --offline --locked --python 3.11.11 python tools/plot_test3_pose_strobe.py results/access_v3`
+(use the cache/font environment above). These show the 0.3 m orientation ramp
+at acceleration multipliers 1.0 (`rho1p33`) and 0.25 (`rho5p33`). Poses are sampled
+at global 0.5 s ticks, starting with the first tick at x > 0.5 m and stopping
+before the first tick at x > 2.5 m (x = 2.5 m is included). Saved x and unwrapped
+yaw are interpolated in time; the current 30 Hz histories contain those ticks.
+Lane heights are display offsets, not physical y coordinates. The manifest's
+`test3_pose_strobe` entry records each method's first/last time and marker count.
+Existing figures, trajectories and summary CSVs are preserved.
 
 Test 1, Test 2, and Test 5(b) summaries add `tau_y_s` beside `response_distance_m`;
 fixed-preview base rows use the small-error prediction `L / v_des`, while adaptive

@@ -53,8 +53,8 @@
     }
   ],
   "desired_vector_fixture_cases": 192,
-  "required_figure_pairs": 46,
-  "figure_pairs": 85,
+  "required_figure_pairs": 48,
+  "figure_pairs": 87,
   "v2_parity": {
     "available": true,
     "compared_conditions": 136,
@@ -63,5 +63,5 @@
   "protected_v2_files_unchanged": 17251,
   "source_sha256": "f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129",
   "numerical_source_sha256": "2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f",
-  "wall_time_s": 212.10737571306527
+  "wall_time_s": 212.36952657904476
 }

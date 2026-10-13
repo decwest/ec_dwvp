@@ -161,6 +161,7 @@ def validate(root,study='all'):
         expected_stems += ['test3/test3_acceleration_ratio_ramp_'+v+'_'+s for v in ('1','0p6','0p4','0p3','0p2') for s in ('overshoot','heading_integral','heading')]
         expected_stems += ['test3/test3_ramp_0p3_acceleration_'+v+'_'+s for v in ('0p25','1') for s in ('speed','yaw','signed_heading')]
         expected_stems += ['test3/test3_'+s for s in ('acceleration_ratio_legend','acceleration_time_series_legend','max_orientation_vs_length')]
+        expected_stems += ['test3/test3_pose_strobe_rho'+v for v in ('1p33','5p33')]
     if 'test4' in selected:
         expected_stems += ['test4/test4_'+s for s in ('scene','cost0_approach1_distance_speed','cost1_approach1_distance_speed')]
     if 'test5' in selected:

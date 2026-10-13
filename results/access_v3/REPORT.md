@@ -1,6 +1,6 @@
 # access_v3 results
 
-5841 conditions; 5424 distinct trajectories; 5759 successes, 82 timeouts, 0 errors/collisions.
+5847 conditions; 5430 distinct trajectories; 5765 successes, 82 timeouts, 0 errors/collisions.
 
 All errors cover start through settled goal arrival or timeout. Failed travel times and 2% settling times are undefined; noise recovery requires all 20 seeds to succeed. Complete per-condition metrics remain in each test’s `summary.csv`.
 
@@ -51,21 +51,27 @@ Base τy is the small-error value L/v; DWPP fits are descriptive. Fixed-Dy indep
 | L [m] | Dy [m] | τy [s] | eθ,max [deg] | travel [s] | goal |
 | --- | --- | --- | --- | --- | --- |
 | 0.055 | 0.110 | 0.500 | 5.510 | 24.900 | yes |
+| 0.055 | 0.165 | 0.750 | 5.509 | 24.900 | yes |
 | 0.055 | 0.330 | 1.500 | 5.508 | 24.900 | yes |
 | 0.055 | base | 0.250 | 5.514 | 24.900 | yes |
 | 0.080 | 0.110 | 0.500 | 7.769 | 24.433 | yes |
+| 0.080 | 0.165 | 0.750 | 7.770 | 24.433 | yes |
 | 0.080 | 0.330 | 1.500 | 7.772 | 24.433 | yes |
 | 0.080 | base | 0.364 | 7.768 | 24.433 | yes |
 | 0.110 | 0.110 | 0.500 | 10.555 | 24.233 | yes |
+| 0.110 | 0.165 | 0.750 | 10.552 | 24.233 | yes |
 | 0.110 | 0.330 | 1.500 | 10.548 | 24.233 | yes |
 | 0.110 | base | 0.500 | 10.555 | 24.233 | yes |
 | 0.165 | 0.110 | 0.500 | 17.541 | 23.867 | yes |
+| 0.165 | 0.165 | 0.750 | 17.540 | 23.867 | yes |
 | 0.165 | 0.330 | 1.500 | 17.540 | 23.867 | yes |
 | 0.165 | base | 0.750 | 17.540 | 23.867 | yes |
 | 0.220 | 0.110 | 0.500 | 24.174 | 23.567 | yes |
+| 0.220 | 0.165 | 0.750 | 24.174 | 23.567 | yes |
 | 0.220 | 0.330 | 1.500 | 24.174 | 23.567 | yes |
 | 0.220 | base | 1.000 | 24.174 | 23.567 | yes |
 | 0.330 | 0.110 | 0.500 | 35.769 | 23.100 | yes |
+| 0.330 | 0.165 | 0.750 | 35.774 | 23.100 | yes |
 | 0.330 | 0.330 | 1.500 | 35.781 | 23.100 | yes |
 | 0.330 | base | 1.500 | 35.781 | 23.100 | yes |
 
@@ -94,7 +100,7 @@ LaTeX tabular fragment: [test2/test2_arc_table.tex](test2/test2_arc_table.tex).
 
 At fixed L, the sampled 1 mm reaction distance varies by up to 0.007334 m across response settings; this threshold metric does not establish exact independence from τy.
 
-Updated figures (PDF and PNG): `test2/test2_arc_lateral_error`, `test2/test2_incut_vs_lookahead`, and `test2/test2_arc_paths` (entry inset). The lateral-error panel uses L=0.33 m and projected arclength from 0.5 m before entry to 0.5 m before the endpoint; dotted vertical lines mark entry and exit. Orientation panels and the shared `test2_legend` retain their definitions and styling.
+Figure revision c4: Test 1 has a single-row, five-column legend; the response, time-series and Test 5 axes use mathematical symbols. Test 2(a) adds six τy=0.75 s conditions, with the same response colors as Test 2(b). The L comparison still uses τy=0.5 s. The 2.3 × 2.0 in `test2/test2_arc_paths` panel shows L=0.33 m, all four response settings, and an entry inset without an internal legend. The lateral-error panel uses projected arclength from 0.5 m before entry to 0.5 m before the endpoint; dotted vertical lines mark entry and exit.
 
 ## Test 3: constraints
 
@@ -186,7 +192,7 @@ The position-only response plot adds mean Ip on the right axis (thin dashed curv
 
 | method | distinct trials | cycle-weighted mean [µs] | median trial p95 [µs] | maximum [µs] |
 | --- | --- | --- | --- | --- |
-| dwvp | 4597 | 182.688 | 316.363 | 10864.320 |
+| dwvp | 4603 | 182.764 | 316.614 | 10864.320 |
 | vp | 367 | 80.633 | 112.743 | 1955.970 |
 | vp_scaled | 355 | 84.535 | 122.005 | 890.759 |
 | dwpp | 103 | 82.784 | 130.607 | 2935.271 |
@@ -194,18 +200,18 @@ The position-only response plot adds mean Ip on the right axis (thin dashed curv
 
 Times measure Python preview, demand and command calculation, excluding noise generation, integration and plotting; they are not a ROS real-time guarantee.
 
-Current simulation/cache wall time: 33.4 s; 5841 cache hits; 8 workers. Earlier attempts remain in the manifest.
+Current simulation/cache wall time: 33.2 s; 5847 cache hits; 8 workers. Earlier attempts remain in the manifest.
 
-Current run including figure regeneration: 45.2 s.
+Current run including figure regeneration: 45.4 s.
 
-Immediately preceding run: simulation/cache 60.0 s; including figures 72.2 s. Complete timing history is in the manifest.
+Immediately preceding run: simulation/cache 33.2 s; including figures 45.7 s. Complete timing history is in the manifest.
 
-Validation: passed; 5841 conditions, 5424 trajectories; runtime 203.7 s; 17251 protected files unchanged.
+Validation: passed; 5847 conditions, 5430 trajectories; runtime 206.5 s; 17251 protected files unchanged.
 
-Pytest: 125 passed in 4.61s
+Pytest: 126 passed in 4.55s
 
-Source SHA-256: `bc6e8342a2aa326c47d369ac7a1ee8a1908eb2848db55467b339492045ccddde`; numerical source: `2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f`.
+Source SHA-256: `f240b07ba8b458c4631a2e5d9eec377a67c14c45ee772598823236922633119c`; numerical source: `2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f`.
 
 All 87 PDF/PNG figure pairs are listed in [manifest.json](manifest.json). Per-trial histories under `trials/` are Git-ignored. The compensation identity and endpoint limits are in `docs/desired_velocity.md`.
 
-Changed source, configuration, documentation and tests: `src/omnidirectional_dwvp/access_plotting.py`, `tests/test_access_v2.py`.
+Changed source, configuration, documentation and tests: `configs/access_v3.yaml`, `src/omnidirectional_dwvp/access_plotting.py`, `src/omnidirectional_dwvp/access_v3_outputs.py`, `tests/test_access_v2.py`, `tests/test_access_v3.py`, `tests/test_pose_strobe.py`, `tools/plot_test3_pose_strobe.py`.

@@ -5,11 +5,10 @@ import json
 from pathlib import Path
 
 import numpy as np
-from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS, LABELS, STYLES, style
+from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS, LABELS, style
 from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
 from omnidirectional_dwvp.studies import ROOT
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
 
 
 def sample_poses(times, poses):
@@ -37,7 +36,6 @@ def pose_figure(samples):
     ax.set_xticks(np.arange(.5, 2.51, .5))
     ax.spines['left'].set_visible(False)
     ax.axvspan(1., 1.3, color='#bf4145', alpha=.12, lw=0, zorder=-1)
-    radius = .06
     for lane, name in zip((.9, .6, .3, 0.), ('Path', *(LABELS[m] for m in HEADING_METHODS))):
         ax.axhline(lane, color='.8', lw=.45, zorder=0)
         ax.text(-.04, lane, name, transform=ax.get_yaxis_transform(),
@@ -45,19 +43,15 @@ def pose_figure(samples):
 
     def arrows(xs, lane, yaw, length, color):
         ax.quiver(xs, np.full_like(xs, lane), length*np.cos(yaw), length*np.sin(yaw),
-                  angles='xy', scale_units='xy', scale=1, color=color, width=.003,
+                  angles='xy', scale_units='xy', scale=1, pivot='tail', color=color, width=.0025,
                   headwidth=3, headlength=4, headaxislength=3.5, zorder=3)
 
-    reference_x = np.arange(.5, 2.51, .25)
+    reference_x = np.arange(.5, 2.51, .1)
     reference_yaw = np.clip((reference_x - 1.) / .3, 0., 1.) * np.pi/2
-    arrows(reference_x, .9, reference_yaw, 1.8*radius, '#bf4145')
+    arrows(reference_x, .9, reference_yaw, .12, '#bf4145')
     for lane, method in zip((.6, .3, 0.), HEADING_METHODS):
         xs, yaw = samples[method][:, 0], samples[method][:, 1]
-        for x in xs:
-            ax.add_patch(Circle((x, lane), radius, facecolor='white',
-                                edgecolor=COLORS[method], linestyle=STYLES[method],
-                                linewidth=.65, zorder=2))
-        arrows(xs, lane, yaw, .9*radius, COLORS[method])
+        arrows(xs, lane, yaw, .12, COLORS[method])
     return fig
 
 

@@ -171,7 +171,13 @@ def test_v3_grid_and_noise_seeds():
     cfg,settings=profile()
     rows=plan_conditions(cfg,settings,0,selected_studies('all'))
     counts={test:sum(c['test']==test for c in rows) for test in selected_studies('all')}
-    assert counts==dict(test1=30,test2=30,test3=132,test4=4,test5=5624)
+    assert counts==dict(test1=30,test2=36,test3=132,test4=4,test5=5624)
+    orientation = [c for c in rows if c['test']=='test2' and c['part']=='a']
+    assert len(orientation)==24
+    assert {(c['config']['fixed_lookahead'], c['config']['response_distance']) for c in orientation}=={
+        (look, response) for look in (.055,.08,.11,.165,.22,.33) for response in (.11,.165,.33,None)}
+    added = [c for c in orientation if c['config']['response_distance']==.165]
+    assert len(added)==6 and all(c['config']['response_distance']/cfg.translation_speed==.75 for c in added)
     assert not any(c['method']=='vp_scaled_accel' for c in rows)
     for c in rows:
         if c['test'] in ('test3','test4'):
@@ -262,8 +268,8 @@ def test_noise_figure_axes_and_series(tmp_path, monkeypatch, component, paramete
         response = parameter=='response_distance'
         assert stem.name=='test5_noise_travel_time_vs_'+('response' if response else 'lookahead')+('' if component=='combined' else '_'+component)
         ax = fig.axes[0]
-        assert ax.get_xlabel()==(r'$\tau_y$ [s]' if response else r'$L$ [m]' if component=='xy_only' else 'Lookahead distance [m]')
-        assert ax.get_ylabel()==(r'$T_m$ [s]' if component=='xy_only' else 'Mean travel time [s]')
+        assert ax.get_xlabel()==(r'$\tau_y$ [s]' if response else r'$L$ [m]')
+        assert ax.get_ylabel()==r'$T_m$ [s]'
         travel = [line for line in ax.lines if line.get_marker()=='o']
         if component=='xy_only' and response:
             assert len(fig.axes)==3
@@ -297,6 +303,76 @@ def test_noise_figure_axes_and_series(tmp_path, monkeypatch, component, paramete
                                    [outputs.noise_lookahead_estimate(cfg, xy)/(cfg.translation_speed if response else 1) for xy in noisy_xy])
     finally:
         plt.close(fig)
+
+
+def test_response_panels_symbols_legends_and_arc_inset(tmp_path, monkeypatch):
+    import matplotlib.pyplot as plt
+    from omnidirectional_dwvp import access_v3_outputs as outputs
+    cfg, settings = profile()
+    rows = []
+    for c in plan_conditions(cfg, settings, 0, ('test1', 'test2')):
+        if c['method'] != 'dwvp':
+            continue
+        look, response = c['config']['fixed_lookahead'], c['config']['response_distance']
+        rows.append(dict(test=c['test'], part=c['part'], method='dwvp', fixed_lookahead_m=look,
+                         response_distance_m=response, tau_y_s=(response or look)/cfg.translation_speed,
+                         transition_length_m=.3, eval_max_heading_error_deg=look*100+(response or 0),
+                         entry_incut_m=.02, settling_2pct_time_s=2., crossing_m=0.))
+    arrays = synthetic_arc_result([1.8, 2.2, 3., 4.], [.01,.02,.03,.001]).arrays
+    arrays.update(signed_yaw_errors=np.array([0.,.1,.2,0.]), travel_distance=np.array([.7,1.,1.3,2.3]))
+    monkeypatch.setattr(outputs, 'load', lambda output, row: arrays)
+    captured, bounds = {}, {}
+
+    def capture(fig, stem, **kwargs):
+        captured[stem.name] = fig
+        bounds[stem.name] = kwargs
+        plt.close(fig)
+
+    monkeypatch.setattr(outputs, 'save', capture)
+    outputs.figures(tmp_path, rows, dict(config=asdict(cfg), settings=settings), [])
+    for look in ('0p11', '0p165', '0p33'):
+        fig = captured[f'test1_response_L{look}_lateral']
+        ax = fig.axes[0]
+        np.testing.assert_allclose(fig.get_size_inches(), [2.3,1.65])
+        assert (ax.get_xlabel(), ax.get_ylabel()) == (r'$t$ [s]', r'$e$ [m]')
+    for name, columns in (('test1_response_legend',5), ('test2_legend',4)):
+        fig = captured[name]
+        assert fig.legends[0]._ncols == len(fig.legends[0].get_texts()) == columns
+    np.testing.assert_allclose(captured['test1_response_legend'].get_size_inches(), [7.,.3])
+    assert bounds['test1_response_legend'] == dict(bbox_inches=None)
+    orientation = captured['test2_orientation_vs_lookahead'].axes[0]
+    assert len(orientation.lines) == 4
+    added = orientation.lines[1]
+    assert added.get_color() == outputs.RESPONSE_COLORS[.165]
+    np.testing.assert_allclose(added.get_xdata(), [.055,.08,.11,.165,.22,.33])
+    np.testing.assert_allclose(added.get_ydata(), np.array([.055,.08,.11,.165,.22,.33])*100+.165)
+    response = captured['test2_orientation_response'].axes[0]
+    assert (response.get_xlabel(), response.get_ylabel()) == (r'$x$ [m]', r'$e_\theta$ [deg]')
+    assert [line.get_label() for line in response.lines[:3]] == [r'$L=0.055$ m',r'$L=0.165$ m',r'$L=0.33$ m']
+    for line in response.lines[:3]:
+        np.testing.assert_allclose(line.get_xdata(), arrays['travel_distance'])
+        np.testing.assert_allclose(line.get_ydata(), np.degrees(arrays['signed_yaw_errors']))
+    lateral = captured['test2_arc_lateral_error'].axes[0]
+    assert (lateral.get_xlabel(), lateral.get_ylabel()) == (r'$s$ [m]', r'$e$ [m]')
+    np.testing.assert_allclose(lateral.lines[0].get_xdata(), reference_arclength(arrays))
+    fig = captured['test2_arc_paths']
+    np.testing.assert_allclose(fig.get_size_inches(), [2.3,2.])
+    assert bounds['test2_arc_paths'] == dict(bbox_inches=None)
+    ax = fig.axes[0]
+    assert (ax.get_xlabel(), ax.get_ylabel()) == (r'$x$ [m]', r'$y$ [m]')
+    assert ax.get_xlim() == ax.get_ylim() == (-.2,3.2) and ax.get_aspect() == 1
+    inset, = ax.child_axes
+    assert inset.get_aspect() == 1
+    np.testing.assert_allclose(inset.get_xlim(), [1.75,2.65])
+    np.testing.assert_allclose(inset.get_ylim(), [-.03,.28])
+    for axis in (ax, inset):
+        assert axis.get_legend() is None and axis.get_title() == ''
+        assert len(axis.lines) == 5
+        reference, *curves = axis.lines
+        assert reference.get_color() == '.2' and reference.get_linestyle() == ':'
+        np.testing.assert_allclose(reference.get_xydata(), arrays['path'][:,:2])
+        assert [line.get_color() for line in curves] == [outputs.RESPONSE_COLORS[d] for d in (.11,.165,.33,None)]
+        assert [line.get_linestyle() for line in curves] == ['-','-','-','--']
 
 
 def test_arc_path_limits_and_endpoint():

@@ -38,7 +38,7 @@ study:
   response_lookaheads: [0.11, 0.165, 0.33]
   response_distances: [0.055, 0.11, 0.165, 0.33]
   orientation_lookaheads: [0.055, 0.08, 0.11, 0.165, 0.22, 0.33]
-  orientation_responses: [0.11, 0.33, null]
+  orientation_responses: [0.11, 0.165, 0.33, null]
   arc_radius: 1.0
   arc_straight_in: 2.0
   arc_angle_deg: 90.0

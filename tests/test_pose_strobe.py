@@ -8,7 +8,7 @@ from matplotlib.colors import to_rgba
 from matplotlib.patches import Circle
 import numpy as np
 
-from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS, STYLES
+from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS
 from omnidirectional_dwvp.access_studies import numerical_hash
 
 
@@ -63,21 +63,21 @@ def test_pose_strobe_generation(tmp_path, monkeypatch):
         assert ax.get_title() == ax.get_ylabel() == '' and len(ax.get_yticks()) == 0
         assert [text.get_text() for text in ax.texts] == ['Path', 'Clipped VP', 'Scaled VP', 'EC-DWVP']
         assert all(text.get_fontsize() == 7 for text in ax.texts)
-        circles = [patch for patch in ax.patches if isinstance(patch, Circle)]
-        assert len(circles) == 12
+        assert not any(isinstance(patch, Circle) for patch in ax.patches)
+        assert ax.get_xlabel() == r'$x$ [m]'
         for i, (method, lane) in enumerate(zip(HEADING_METHODS, (.6, .3, 0.))):
             info = details['figures'][stem]['methods'][method]
             assert (info['first_time_s'], info['last_time_s'], info['count']) == (1., 2.5, 4)
-            for circle, xpos in zip(circles[4*i:4*i+4], (.75, .75, 1.25, 2.5)):
-                assert circle.center == (xpos, lane) and circle.radius == .06
-                assert circle.get_facecolor() == to_rgba('white')
-                assert circle.get_edgecolor() == to_rgba(COLORS[method])
-                assert circle.get_linestyle() == STYLES[method]
             arrows = ax.collections[i+1]
+            np.testing.assert_allclose(arrows.get_offsets(), [[xpos, lane] for xpos in (.75,.75,1.25,2.5)])
+            np.testing.assert_allclose(arrows.get_facecolors(), [to_rgba(COLORS[method])])
+            assert arrows.pivot == 'tail' and arrows.width <= .003
             yaw = np.array([1., 1.5, 2., 2.5])*.4
-            np.testing.assert_allclose(arrows.U, .054*np.cos(yaw))
-            np.testing.assert_allclose(arrows.V, .054*np.sin(yaw))
+            np.testing.assert_allclose(arrows.U, .12*np.cos(yaw))
+            np.testing.assert_allclose(arrows.V, .12*np.sin(yaw))
         reference = ax.collections[0]
-        np.testing.assert_allclose(reference.get_offsets()[:, 0], np.arange(.5, 2.51, .25))
+        reference_x = np.arange(.5, 2.51, .1)
+        np.testing.assert_allclose(reference.get_offsets()[:, 0], reference_x)
+        np.testing.assert_allclose(np.hypot(reference.U, reference.V), .12)
         np.testing.assert_allclose(np.arctan2(reference.V, reference.U),
-                                   np.deg2rad([0., 0., 0., 75., 90., 90., 90., 90., 90.]))
+                                   np.clip((reference_x-1.)/.3, 0., 1.)*np.pi/2)

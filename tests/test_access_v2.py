@@ -264,6 +264,9 @@ def test_heading_grid_plots_acceleration_axis_boundary_three_methods_and_post_ra
     for scale in ('0p25','1'):
         for quantity in ('speed','yaw','signed_heading'):
             ax=captured[f'ramp_0p3_acceleration_{scale}_{quantity}'].axes[0]
+            assert ax.get_xlabel()==r'$t$ [s]'
+            assert ax.get_ylabel()=={'speed':r'$v$ [m/s]', 'yaw':r'$\omega$ [rad/s]',
+                                     'signed_heading':r'$e_\theta$ [deg]'}[quantity]
             for line in ax.lines[:3]:
                 # Include the final saved pose beyond the former x=3.25 m cutoff.
                 expected=[0.,2.,4.,6.] if quantity=='signed_heading' else [0.,2.,4.]
@@ -273,8 +276,9 @@ def test_heading_grid_plots_acceleration_axis_boundary_three_methods_and_post_ra
     labels=[text.get_text() for text in captured['acceleration_ratio_legend'].legends[0].get_texts()]
     assert labels==['Clipped VP','Scaled VP','EC-DWVP']
     np.testing.assert_allclose(captured['acceleration_ratio_legend'].get_size_inches(),[3.7,.3])
-    assert captured['ramp_0p3_acceleration_1_yaw'].axes[0].get_ylabel()=='Angular velocity [rad/s]'
-    assert captured['ramp_0p3_acceleration_1_signed_heading'].axes[0].get_ylabel()=='Signed orientation error [deg]'
+    for name in ('acceleration_ratio_legend', 'acceleration_time_series_legend'):
+        assert captured[name].legends[0]._ncols==3
+        assert len(captured[name].legends[0].get_texts())==3
     assert plotting.plt.rcParams['pdf.fonttype']==42 and plotting.plt.rcParams['mathtext.fontset']=='stix'
 
 

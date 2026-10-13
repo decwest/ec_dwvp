@@ -1,8 +1,8 @@
 {
   "status": "passed",
-  "conditions": 5841,
-  "distinct_trajectories": 5424,
-  "command_cycles_replayed": 39240,
+  "conditions": 5847,
+  "distinct_trajectories": 5430,
+  "command_cycles_replayed": 39282,
   "noise_groups": 280,
   "position_only_base_conditions": 640,
   "fixed_lookahead_at_response_conditions": 1600,
@@ -61,7 +61,7 @@
     "maximum_absolute_difference": 0.0
   },
   "protected_v2_files_unchanged": 17251,
-  "source_sha256": "bc6e8342a2aa326c47d369ac7a1ee8a1908eb2848db55467b339492045ccddde",
+  "source_sha256": "f240b07ba8b458c4631a2e5d9eec377a67c14c45ee772598823236922633119c",
   "numerical_source_sha256": "2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f",
-  "wall_time_s": 203.65819220396224
+  "wall_time_s": 206.52637094305828
 }

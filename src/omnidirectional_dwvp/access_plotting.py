@@ -27,10 +27,10 @@ def style():
                          'axes.spines.top': False, 'axes.spines.right': False})
 
 
-def save(fig, stem):
+def save(fig, stem, *, bbox_inches='tight'):
     fig.tight_layout(pad=.45)
-    fig.savefig(stem.with_suffix('.pdf'), bbox_inches='tight')
-    fig.savefig(stem.with_suffix('.png'), dpi=240, bbox_inches='tight')
+    fig.savefig(stem.with_suffix('.pdf'), bbox_inches=bbox_inches)
+    fig.savefig(stem.with_suffix('.png'), dpi=240, bbox_inches=bbox_inches)
     plt.close(fig)
 
 
@@ -112,10 +112,10 @@ def figures(output, rows, settings, config):
                     curves.append((method, a['travel_distance'][mask], np.rad2deg(a['yaw_errors'][mask])))
                 panel(out/(name+'_heading'), curves, 'Travel distance [m]', 'Orientation error [deg]')
             if test in ('test2', 'test3'):
-                for quantity, label in (('speed', 'Translational speed [m/s]'), ('yaw', 'Angular velocity [rad/s]')):
+                for quantity, label in (('speed', r'$v$ [m/s]'), ('yaw', r'$\omega$ [rad/s]')):
                     curves = [(m, a['times'][:-1], np.linalg.norm(a['applied'][:, :2], axis=1) if quantity=='speed' else a['applied'][:, 2]) for m, a in data]
                     reference = group[0].get('predicted_speed_m_s') if quantity=='speed' and test=='test2' else None
-                    panel(out/(name+'_'+quantity), curves, 'Time [s]', label, reference)
+                    panel(out/(name+'_'+quantity), curves, r'$t$ [s]', label, reference)
             if test=='test3':
                 curves = [(m, a['travel_distance'][:-1], np.linalg.norm(a['applied'][:, :2], axis=1)) for m, a in data]
                 panel(out/(name+'_distance_speed'), curves, 'Travel distance [m]', 'Translational speed [m/s]')
@@ -182,8 +182,8 @@ def figures(output, rows, settings, config):
                 with np.load(output/'trials'/row['trial_id']/'trajectory.npz') as a:
                     data.append((row['method'], {k:a[k] for k in a}))
             stem = f"ramp_{settings['representative_rapid']:g}_acceleration_{scale:g}".replace('.', 'p')
-            for quantity, label in (('speed', 'Translational speed [m/s]'), ('yaw', 'Angular velocity [rad/s]'),
-                                    ('signed_heading', 'Signed orientation error [deg]')):
+            for quantity, label in (('speed', r'$v$ [m/s]'), ('yaw', r'$\omega$ [rad/s]'),
+                                    ('signed_heading', r'$e_\theta$ [deg]')):
                 curves = []
                 for method, a in data:
                     if quantity=='signed_heading':
@@ -195,7 +195,7 @@ def figures(output, rows, settings, config):
                         x = a['times'][:-1][mask]
                         y = (np.linalg.norm(a['applied'][:, :2], axis=1) if quantity=='speed' else a['applied'][:, 2])[mask]
                     curves.append((method, x, y))
-                panel(out/(stem+'_'+quantity), curves, 'Time [s]', label,
+                panel(out/(stem+'_'+quantity), curves, r'$t$ [s]', label,
                       reference=0. if quantity=='signed_heading' else None)
     chosen = [r for r in rows if r['test'] in ('test4', 'regulation-sweep', 'acceleration-sweep')]
     if not chosen:

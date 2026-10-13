@@ -152,8 +152,8 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
     stem = 'response' if response else 'lookahead'
     suffix = '' if component=='combined' else '_'+component
     finish(fig, ax, output/'test5'/f'test5_noise_travel_time_vs_{stem}{suffix}',
-           r'$\tau_y$ [s]' if response else r'$L$ [m]' if fixed_response else 'Lookahead distance [m]',
-           r'$T_m$ [s]' if component=='xy_only' else 'Mean travel time [s]', base is None and not fixed_response)
+           r'$\tau_y$ [s]' if response else r'$L$ [m]',
+           r'$T_m$ [s]', base is None and not fixed_response)
 
 
 class V2OutputPaths:
@@ -195,13 +195,12 @@ def figures(output, rows, manifest, grouped):
                 d = r['response_distance_m']
                 ax.plot(a['times'], a['signed_lateral_errors'], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1)
             ax.axhline(0, color='.5', lw=.5)
-            finish(fig, ax, output/'test1'/f'test1_response_L{tag(look)}_lateral', 'Time [s]', 'Signed lateral error [m]', False)
-        fig = plt.figure(figsize=(7.0, .7))
+            finish(fig, ax, output/'test1'/f'test1_response_L{tag(look)}_lateral', r'$t$ [s]', r'$e$ [m]', False)
+        fig = plt.figure(figsize=(7.0, .3))
         handles = [Line2D([], [], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', label=label(d, speed))
                    for d in [*manifest['settings']['response_distances'], None]]
-        # Retain the standalone legend's original 315 pt exported width.
-        fig.legend(handles=handles, loc='center', ncol=3, frameon=False, columnspacing=6.3125)
-        save(fig, output/'test1'/'test1_response_legend')
+        fig.legend(handles=handles, loc='center', ncol=5, frameon=False, borderaxespad=0)
+        save(fig, output/'test1'/'test1_response_legend', bbox_inches=None)
         for metric, stem, ylabel in (('settling_2pct_time_s', 'settling', '2% settling time [s]'), ('crossing_m', 'crossing', 'Crossing [m]')):
             fig, ax = plt.subplots(figsize=(3.8, 2.4))
             for index, look in enumerate(manifest['settings']['response_lookaheads']):
@@ -239,7 +238,7 @@ def figures(output, rows, manifest, grouped):
             ax.plot(a['travel_distance'], yaw, color=color, lw=1, label=rf"$L={r['fixed_lookahead_m']:g}$ m")
         ax.axhline(0, color='.5', lw=.5)
         ax.set_xlim(0.7, 2.3)
-        finish(fig, ax, output/'test2'/'test2_orientation_response', 'Travel distance [m]', r'$e_\theta$ [deg]', legend_fontsize=6.5, legend_loc='upper right')
+        finish(fig, ax, output/'test2'/'test2_orientation_response', r'$x$ [m]', r'$e_\theta$ [deg]', legend_fontsize=6.5, legend_loc='upper right')
     arc_series = sorted([r for r in arcs if r['fixed_lookahead_m']==.33], key=lambda r: (r['response_distance_m'] is None, r['response_distance_m'] or 0))
     if arc_series:
         fig, ax = plt.subplots(figsize=(1.75, 1.55))
@@ -254,7 +253,7 @@ def figures(output, rows, manifest, grouped):
         for boundary in (entry, exit):
             ax.axvline(boundary, color='.5', ls=':', lw=.7)
         ax.set_xlim(entry - .5, exit + settings['arc_straight_out'] - .5)
-        finish(fig, ax, output/'test2'/'test2_arc_lateral_error', 'Arclength [m]', r'$e$ [m]', legend=False)
+        finish(fig, ax, output/'test2'/'test2_arc_lateral_error', r'$s$ [m]', r'$e$ [m]', legend=False)
     if ramps or arcs:
         # Shared legend of the time constants for the Test 2 panels (the lookahead legend stays inside panel (a)).
         fig = plt.figure(figsize=(4.6, .3))
@@ -262,29 +261,29 @@ def figures(output, rows, manifest, grouped):
                    for d in [.11, .165, .33, None]]
         fig.legend(handles=handles, loc='center', ncol=4, frameon=False, borderaxespad=0)
         save(fig, output/'test2'/'test2_legend')
-    if arcs:
-        series = [r for r in arcs if r['fixed_lookahead_m']==.33]
-        fig, ax = plt.subplots(figsize=(4.5, 3.1))
-        inset = ax.inset_axes([.08, .60, .45, .30])
-        for i, r in enumerate(series):
+    if arc_series:
+        fig, ax = plt.subplots(figsize=(2.3, 2.0))
+        inset = ax.inset_axes([.17, .64, .62, .29])
+        for i, r in enumerate(arc_series):
             a = load(output, r)
             d = r['response_distance_m']
-            # Stack the longer base label to retain the arc panel's natural width.
-            arc_label = ('base\n'+r"($\tau_y=\frac{L'}{v_{\mathrm{des}}}$)"
-                         if d is None else label(d, speed))
             if i == 0:
                 for axis in (ax, inset):
                     axis.plot(a['path'][:, 0], a['path'][:, 1], ':', color='.2', label='Reference')
             for axis in (ax, inset):
-                axis.plot(a['poses'][:, 0], a['poses'][:, 1], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1, label=arc_label)
+                axis.plot(a['poses'][:, 0], a['poses'][:, 1], color=RESPONSE_COLORS[d], ls='--' if d is None else '-', lw=1)
         entry = manifest['settings']['arc_straight_in']
         inset.set(xlim=(entry-.25, entry+.65), ylim=(-.03, .28))
+        inset.set_aspect('equal')
+        inset.set_xticks([1.8, 2.2, 2.6])
+        inset.set_yticks([0., .2])
         inset.tick_params(labelsize=5.5)
         inset.grid(alpha=.2)
         ax.set_aspect('equal')
+        ax.set(xlim=(-.2, 3.2), ylim=(-.2, 3.2), xlabel=r'$x$ [m]', ylabel=r'$y$ [m]')
+        ax.grid(alpha=.2, lw=.4)
         ax.indicate_inset_zoom(inset, edgecolor='.5', lw=.6)
-        ax.legend(loc='center left', bbox_to_anchor=(1.05, .5), frameon=False, fontsize=7)
-        finish(fig, ax, output/'test2'/'test2_arc_paths', 'x [m]', 'y [m]', False)
+        save(fig, output/'test2'/'test2_arc_paths', bbox_inches=None)
     for component in ('combined', 'xy_only', 'yaw_only'):
         noise_travel_figure(output, grouped, config, 'response_distance', component)
     noise_travel_figure(output, grouped, config, 'fixed_lookahead')
@@ -300,14 +299,14 @@ def figures(output, rows, manifest, grouped):
                         ls=':' if parameter=='response_distance' else STYLES[method], marker='o', ms=3,
                         label='DWVP L=0.11 m, '+label(series[0]['response_distance_m'], speed)
                         if parameter=='response_distance' else LABELS[method])
-        finish(fig, ax, output/'test5'/'test5_noise_orientation', 'Position noise standard deviation [m]', 'Mean max. orientation error [deg]')
+        finish(fig, ax, output/'test5'/'test5_noise_orientation', r'$\sigma_{xy}$ [m]', r'$e_{\theta,\max}$ [deg]')
     sweep = [r for r in rows if r['test']=='test5' and r['part']=='c']
     if sweep:
         fig, ax = plt.subplots(figsize=(3.8, 2.4))
         for method in ('vp', 'vp_scaled', 'dwvp'):
             series = sorted([r for r in sweep if r['method']==method], key=lambda r:r['value'])
             ax.plot([r['value'] for r in series], [r['eval_max_heading_error_deg'] for r in series], color=COLORS[method], ls=STYLES[method], marker='o', ms=3, label=LABELS[method])
-        finish(fig, ax, output/'test5'/'test5_orientation_vs_lookahead', 'Lookahead distance [m]', 'Max. orientation error [deg]')
+        finish(fig, ax, output/'test5'/'test5_orientation_vs_lookahead', r'$L$ [m]', r'$e_{\theta,\max}$ [deg]')
 
 
 def parity(output, manifest):
@@ -449,7 +448,7 @@ def report(output, rows, manifest, grouped, recovery, predictions):
         reaction_spread = max(max(g)-min(g) for look in {r['fixed_lookahead_m'] for r in arcs}
                               for g in [[r['entry_reaction_m'] for r in arcs if r['fixed_lookahead_m']==look]])
         lines.extend([f'At fixed L, the sampled 1 mm reaction distance varies by up to {reaction_spread:.6f} m across response settings; this threshold metric does not establish exact independence from τy.', ''])
-        lines.extend(['Updated figures (PDF and PNG): `test2/test2_arc_lateral_error`, `test2/test2_incut_vs_lookahead`, and `test2/test2_arc_paths` (entry inset). The lateral-error panel uses L=0.33 m and projected arclength from 0.5 m before entry to 0.5 m before the endpoint; dotted vertical lines mark entry and exit. Orientation panels and the shared `test2_legend` retain their definitions and styling.', ''])
+        lines.extend(['Figure revision c4: Test 1 has a single-row, five-column legend; the response, time-series and Test 5 axes use mathematical symbols. Test 2(a) adds six τy=0.75 s conditions, with the same response colors as Test 2(b). The L comparison still uses τy=0.5 s. The 2.3 × 2.0 in `test2/test2_arc_paths` panel shows L=0.33 m, all four response settings, and an entry inset without an internal legend. The lateral-error panel uses projected arclength from 0.5 m before entry to 0.5 m before the endpoint; dotted vertical lines mark entry and exit.', ''])
     for test, title in (('test3', 'Test 3: constraints'), ('test4', 'Test 4: obstacle speed regulation')):
         group = [r for r in rows if r['test']==test]
         if not group:

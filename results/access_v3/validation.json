@@ -1,10 +1,11 @@
 {
   "status": "passed",
-  "conditions": 4241,
-  "distinct_trajectories": 4028,
-  "command_cycles_replayed": 26093,
-  "noise_groups": 200,
+  "conditions": 5841,
+  "distinct_trajectories": 5424,
+  "command_cycles_replayed": 39240,
+  "noise_groups": 280,
   "position_only_base_conditions": 640,
+  "fixed_lookahead_at_response_conditions": 1600,
   "position_only_base_recovery": [
     {
       "parameter": "fixed_lookahead",
@@ -60,7 +61,7 @@
     "maximum_absolute_difference": 0.0
   },
   "protected_v2_files_unchanged": 17251,
-  "source_sha256": "ce65edd69c52368f653f48491fab4419a1a60564f4eb1b0ee7bd4d6701681734",
+  "source_sha256": "f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129",
   "numerical_source_sha256": "2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f",
-  "wall_time_s": 168.51179446000606
+  "wall_time_s": 212.10737571306527
 }

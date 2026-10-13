@@ -100,13 +100,34 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
     else:
         fig, ax = plt.subplots(figsize=(3.3, 2.3))
         base = None
+    position = ax.twinx() if response and component=='xy_only' else None
+    if position is not None:
+        position.set_ylabel(r'$I_p$ [m$\cdot$s]')
+    fixed_response = parameter=='fixed_lookahead' and component=='xy_only'
     levels = sorted({(r['noise_xy_m'], r['noise_yaw_deg']) for r in group})
     for i, (xy, yaw) in enumerate(levels):
+        # Keep the zero-noise runs in the tables; this panel compares four noisy levels.
+        if fixed_response and not xy:
+            continue
         series = sorted([r for r in group if (r['noise_xy_m'],r['noise_yaw_deg'])==(xy,yaw) and r['value'] is not None], key=lambda r:r['value'])
         ax.errorbar([r['tau_y_s'] if response else r['value'] for r in series],
                     [r['travel_time_s_mean'] if r['travel_time_s_mean'] is not None else np.nan for r in series],
                     yerr=[r['travel_time_s_std'] or 0 for r in series], color=NOISE_COLORS[i], marker='o', ms=3, lw=1, capsize=2,
-                    label=rf'$\sigma_{{xy}}={xy:g}$ m, $\sigma_\psi={yaw:g}^\circ$')
+                    ls='--' if fixed_response else '-',
+                    label=rf'$\sigma_{{xy}}={xy:g}$ m' if component=='xy_only' else rf'$\sigma_{{xy}}={xy:g}$ m, $\sigma_\psi={yaw:g}^\circ$')
+        if position is not None:
+            position.plot([r['tau_y_s'] for r in series],
+                          [r['eval_position_error_integral_m_s_mean'] for r in series],
+                          color=NOISE_COLORS[i], ls='--', lw=.7)
+        if fixed_response:
+            compensated = sorted([r for r in grouped if r['scenario']=='offset'
+                                  and r['parameter']=='fixed_lookahead_at_response'
+                                  and r['response_distance_m']==.165
+                                  and (r['noise_xy_m'], r['noise_yaw_deg'])==(xy, yaw)], key=lambda r:r['value'])
+            ax.errorbar([r['value'] for r in compensated],
+                        [r['travel_time_s_mean'] if r['travel_time_s_mean'] is not None else np.nan for r in compensated],
+                        yerr=[r['travel_time_s_std'] or 0 for r in compensated],
+                        color=NOISE_COLORS[i], ls='-', marker='o', ms=3, lw=1, capsize=2)
         if xy:
             estimate = noise_lookahead_estimate(config, xy)/(config.translation_speed if response else 1.)
             ax.axvline(estimate, color=NOISE_COLORS[i], ls=':', lw=.7)
@@ -120,11 +141,19 @@ def noise_travel_figure(output, grouped, config, parameter, component='combined'
         base.set(xticks=[], xlabel=label(None, config.translation_speed), xlim=(-.8,len(levels)-.2))
         base.grid(axis='y', alpha=.2, lw=.4)
         ax.set_xlim(0, 1.05*max(r['tau_y_s'] for r in group))
-        ax.legend(frameon=False, fontsize=7, loc='upper right')
+        ax.legend(frameon=False, fontsize=7, loc='upper left' if position is not None else 'upper right')
+    if fixed_response:
+        handles = [Line2D([], [], color=NOISE_COLORS[i], lw=1, label=rf'$\sigma_{{xy}}={xy:g}$ m')
+                   for i, (xy, _) in enumerate(levels) if xy]
+        handles.extend([Line2D([], [], color='0.2', ls='-', lw=1,
+                               label=rf'EC-DWVP ($\tau_y={.165/config.translation_speed:g}$ s)'),
+                        Line2D([], [], color='0.2', ls='--', lw=1, label=label(None, config.translation_speed))])
+        ax.legend(handles=handles, frameon=False, fontsize=6, loc='upper right')
     stem = 'response' if response else 'lookahead'
     suffix = '' if component=='combined' else '_'+component
     finish(fig, ax, output/'test5'/f'test5_noise_travel_time_vs_{stem}{suffix}',
-           r'$\tau_y$ [s]' if response else 'Lookahead distance [m]', 'Mean travel time [s]', base is None)
+           r'$\tau_y$ [s]' if response else r'$L$ [m]' if fixed_response else 'Lookahead distance [m]',
+           r'$T_m$ [s]' if component=='xy_only' else 'Mean travel time [s]', base is None and not fixed_response)
 
 
 class V2OutputPaths:
@@ -458,6 +487,18 @@ def report(output, rows, manifest, grouped, recovery, predictions):
                   [[yaw, min(v), max(v)] for yaw in sorted({r['noise_yaw_deg'] for r in ratios})
                    for v in [[r['travel_time_ratio'] for r in ratios if r['noise_yaw_deg']==yaw and r['travel_time_ratio'] is not None]] if v])
         lines.extend(['Detailed recovery and yaw-only ratios: [combined](test5/travel_time_recovery.csv), [position-only](test5/travel_time_recovery_xy_only.csv), [yaw-only](test5/yaw_only_ratios.csv). Test 5(c) rapid-ramp fixed-preview results remain in [test5/summary.csv](test5/summary.csv) and `test5/test5_orientation_vs_lookahead.{pdf,png}`.', ''])
+        sweep = [r for r in grouped if r['parameter']=='fixed_lookahead_at_response']
+        if sweep:
+            lines.extend(['Test 5(b), position noise with fixed τy: each cell gives mean travel time ± sample SD [s]; mean Ip [m·s] over 20 seeds. Ip integrates position error through settled arrival. The zero-noise seeds are deterministic repetitions.', ''])
+            levels = sorted({r['noise_xy_m'] for r in sweep})
+            index = {(r['fixed_lookahead_m'], r['tau_y_s'], r['noise_xy_m']): r for r in sweep}
+            def cell(r):
+                return f"{fmt(r['travel_time_s_mean'])} ± {fmt(r['travel_time_s_std'])}; {fmt(r['eval_position_error_integral_m_s_mean'])}"
+            table(['L [m]', 'τy [s]', *[f'σxy={xy:g} m' for xy in levels]],
+                  [[look, tau, *[cell(index[look, tau, xy]) for xy in levels]]
+                   for tau in sorted({r['tau_y_s'] for r in sweep})
+                   for look in sorted({r['fixed_lookahead_m'] for r in sweep})])
+            lines.extend(['The position-only response plot adds mean Ip on the right axis (thin dashed curves); the lookahead plot compares fixed τy=0.75 s (solid) with base τy=L′/v (dashed). The τy=1.5 s sweep is tabulated only. These finite-grid results include approach and goal behavior.', ''])
     heading('Verification and provenance')
     timing = {}
     for trial in manifest['trials']:

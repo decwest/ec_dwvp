@@ -1,6 +1,6 @@
 # access_v3 results
 
-4241 conditions; 4028 distinct trajectories; 4159 successes, 82 timeouts, 0 errors/collisions.
+5841 conditions; 5424 distinct trajectories; 5759 successes, 82 timeouts, 0 errors/collisions.
 
 All errors cover start through settled goal arrival or timeout. Failed travel times and 2% settling times are undefined; noise recovery requires all 20 seeds to succeed. Complete per-condition metrics remain in each test’s `summary.csv`.
 
@@ -159,11 +159,34 @@ Recovery below means all 20 seeds succeed and mean travel time is at most 1.1 ti
 
 Detailed recovery and yaw-only ratios: [combined](test5/travel_time_recovery.csv), [position-only](test5/travel_time_recovery_xy_only.csv), [yaw-only](test5/yaw_only_ratios.csv). Test 5(c) rapid-ramp fixed-preview results remain in [test5/summary.csv](test5/summary.csv) and `test5/test5_orientation_vs_lookahead.{pdf,png}`.
 
+Test 5(b), position noise with fixed τy: each cell gives mean travel time ± sample SD [s]; mean Ip [m·s] over 20 seeds. Ip integrates position error through settled arrival. The zero-noise seeds are deterministic repetitions.
+
+| L [m] | τy [s] | σxy=0 m | σxy=0.002 m | σxy=0.005 m | σxy=0.01 m | σxy=0.02 m |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.055 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.602 ± 0.143; 0.866 | 28.720 ± 0.987; 0.878 | 46.572 ± 2.266; 0.924 |
+| 0.080 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.602 ± 0.143; 0.866 | 28.808 ± 0.953; 0.879 | 46.847 ± 2.222; 0.925 |
+| 0.110 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.603 ± 0.142; 0.866 | 28.873 ± 0.968; 0.879 | 47.055 ± 2.089; 0.925 |
+| 0.165 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.610 ± 0.144; 0.866 | 28.950 ± 0.983; 0.879 | 47.100 ± 2.026; 0.926 |
+| 0.220 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.610 ± 0.144; 0.866 | 28.950 ± 0.983; 0.879 | 47.100 ± 2.026; 0.926 |
+| 0.330 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.610 ± 0.144; 0.866 | 28.950 ± 0.983; 0.879 | 47.100 ± 2.026; 0.926 |
+| 0.440 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.610 ± 0.144; 0.866 | 28.950 ± 0.983; 0.879 | 47.100 ± 2.026; 0.926 |
+| 0.600 | 0.750 | 23.933 ± 0.000; 0.858 | 24.002 ± 0.045; 0.861 | 24.610 ± 0.144; 0.866 | 28.950 ± 0.983; 0.879 | 47.100 ± 2.026; 0.926 |
+| 0.055 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.046 | 23.595 ± 0.091; 1.052 | 24.327 ± 0.265; 1.066 | 28.192 ± 0.945; 1.113 |
+| 0.080 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.603 ± 0.088; 1.052 | 24.382 ± 0.215; 1.066 | 28.620 ± 0.947; 1.114 |
+| 0.110 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.387 ± 0.226; 1.066 | 28.835 ± 0.893; 1.115 |
+| 0.165 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.392 ± 0.226; 1.066 | 29.023 ± 0.990; 1.115 |
+| 0.220 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.430 ± 0.243; 1.066 | 29.140 ± 0.901; 1.116 |
+| 0.330 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.463 ± 0.254; 1.066 | 29.232 ± 0.838; 1.116 |
+| 0.440 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.463 ± 0.254; 1.066 | 29.232 ± 0.838; 1.116 |
+| 0.600 | 1.500 | 23.400 ± 0.000; 1.044 | 23.450 ± 0.049; 1.047 | 23.607 ± 0.096; 1.052 | 24.463 ± 0.254; 1.066 | 29.232 ± 0.838; 1.116 |
+
+The position-only response plot adds mean Ip on the right axis (thin dashed curves); the lookahead plot compares fixed τy=0.75 s (solid) with base τy=L′/v (dashed). The τy=1.5 s sweep is tabulated only. These finite-grid results include approach and goal behavior.
+
 ## Verification and provenance
 
 | method | distinct trials | cycle-weighted mean [µs] | median trial p95 [µs] | maximum [µs] |
 | --- | --- | --- | --- | --- |
-| dwvp | 3201 | 154.695 | 190.354 | 5393.200 |
+| dwvp | 4597 | 182.688 | 316.363 | 10864.320 |
 | vp | 367 | 80.633 | 112.743 | 1955.970 |
 | vp_scaled | 355 | 84.535 | 122.005 | 890.759 |
 | dwpp | 103 | 82.784 | 130.607 | 2935.271 |
@@ -171,18 +194,18 @@ Detailed recovery and yaw-only ratios: [combined](test5/travel_time_recovery.csv
 
 Times measure Python preview, demand and command calculation, excluding noise generation, integration and plotting; they are not a ROS real-time guarantee.
 
-Current simulation/cache wall time: 117.1 s; 213 cache hits; 8 workers. Earlier attempts remain in the manifest.
+Current simulation/cache wall time: 33.4 s; 5841 cache hits; 8 workers. Earlier attempts remain in the manifest.
 
-Current run including figure regeneration: 128.6 s.
+Current run including figure regeneration: 45.2 s.
 
-Immediately preceding run: simulation/cache 17.6 s; including figures 29.4 s. Complete timing history is in the manifest.
+Immediately preceding run: simulation/cache 60.0 s; including figures 72.2 s. Complete timing history is in the manifest.
 
-Validation: passed; 4241 conditions, 4028 trajectories; runtime 168.5 s; 17251 protected files unchanged.
+Validation: passed; 5841 conditions, 5424 trajectories; runtime 212.1 s; 17251 protected files unchanged.
 
-Pytest: 117 passed in 4.11s
+Pytest: 124 passed in 4.19s
 
-Source SHA-256: `ce65edd69c52368f653f48491fab4419a1a60564f4eb1b0ee7bd4d6701681734`; numerical source: `2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f`.
+Source SHA-256: `f0119dcc8ee20af0336e990129ecf58a46f9ceb2b1754c314cd6cb9705722129`; numerical source: `2605e77c896500abc93d22a6a16f2422ef64830189aecfe8797253345410010f`.
 
 All 85 PDF/PNG figure pairs are listed in [manifest.json](manifest.json). Per-trial histories under `trials/` are Git-ignored. The compensation identity and endpoint limits are in `docs/desired_velocity.md`.
 
-Changed source, configuration, documentation and tests: `docs/results.md`, `src/omnidirectional_dwvp/access_v3_metrics.py`, `src/omnidirectional_dwvp/access_v3_outputs.py`, `tests/test_access_v3.py`.
+Changed source, configuration, documentation and tests: `src/omnidirectional_dwvp/access_v3.py`, `src/omnidirectional_dwvp/access_v3_outputs.py`, `tests/test_access_v3.py`, `tools/validate_access_v3.py`.

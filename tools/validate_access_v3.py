@@ -10,7 +10,7 @@ import numpy as np
 from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
 from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
 from omnidirectional_dwvp.access_v3_metrics import extra_metrics
-from omnidirectional_dwvp.access_v3_outputs import noise_summary, recovery_summary, yaw_ratios, parity, report
+from omnidirectional_dwvp.access_v3_outputs import NOISE_KEYS, noise_summary, recovery_summary, yaw_ratios, parity, report
 from omnidirectional_dwvp.access_metrics import evaluate
 from omnidirectional_dwvp.config import Config
 from omnidirectional_dwvp.controller import compute_command, preview_target, desired_vector
@@ -37,7 +37,7 @@ def validate(root,study='all'):
     manifest_path=root/('manifest.json' if study=='all' else f'manifest_{study}.json')
     manifest=json.loads(manifest_path.read_text())
     assert manifest['complete'] and manifest['suite']=='access_v3'
-    assert manifest['planner_version']=='access_v3.3'
+    assert manifest['planner_version']=='access_v3.4'
     assert manifest['source_sha256']==code_hash()
     assert manifest['numerical_source_sha256']==numerical_hash()
     assert manifest['dependency_lock_sha256']==hashlib.sha256((ROOT/'uv.lock').read_bytes()).hexdigest()
@@ -119,12 +119,19 @@ def validate(root,study='all'):
     grouped=noise_summary(rows)
     position_only_base=[r for r in rows if r['test']=='test5' and r['part']=='b'
                         and r['parameter']=='fixed_lookahead' and r['noise_xy_m']>0 and r['noise_yaw_deg']==0]
+    fixed_response=[r for r in rows if r['test']=='test5' and r['part']=='b'
+                    and r['parameter']=='fixed_lookahead_at_response']
     if 'test5' in selected:
         settings=manifest['settings']
         assert Counter((r['fixed_lookahead_m'],r['noise_xy_m'],r['seed']) for r in position_only_base)==Counter(
             (look,xy,seed) for look in settings['fixed_lookaheads'] for xy in settings['noise_xy_only_levels']
             for seed in range(manifest['seed'],manifest['seed']+settings['noise_seeds']))
         assert all(r['scenario']=='offset' and r['method']=='dwvp' and r['response_distance_m'] is None for r in position_only_base)
+        assert Counter((r['fixed_lookahead_m'],r['response_distance_m'],r['noise_xy_m'],r['seed']) for r in fixed_response)==Counter(
+            (look,response,xy,seed) for look in settings['fixed_lookaheads'] for response in (.165,.33)
+            for xy in (0.,*settings['noise_xy_only_levels'])
+            for seed in range(manifest['seed'],manifest['seed']+settings['noise_seeds']))
+        assert all(r['scenario']=='offset' and r['method']=='dwvp' and r['noise_yaw_deg']==0 for r in fixed_response)
     recovery=recovery_summary(grouped,cfg)
     if grouped:
         csv_matches(root/'test5/noise_summary.csv',grouped)
@@ -134,7 +141,7 @@ def validate(root,study='all'):
         assert all(r['n']==manifest['settings']['noise_seeds'] for r in grouped)
         for group in grouped:
             seeds=[r['seed'] for r in rows if r['test']=='test5' and r['part']=='b' and
-                   all(r.get(k)==group[k] for k in ('scenario','method','parameter','value','noise_xy_m','noise_yaw_deg'))]
+                   all(r.get(k)==group[k] for k in NOISE_KEYS)]
             assert sorted(seeds)==list(range(manifest['seed'],manifest['seed']+manifest['settings']['noise_seeds']))
     for method,match in manifest.get('time_matches',{}).items():
         best=next(r for r in rows if r['trial_id']==match['best_trial_id'])
@@ -192,6 +199,7 @@ def validate(root,study='all'):
     validation=dict(status='passed',conditions=len(rows),distinct_trajectories=len(unique),
                     command_cycles_replayed=replays,noise_groups=len(grouped),
                     position_only_base_conditions=len(position_only_base),
+                    fixed_lookahead_at_response_conditions=len(fixed_response),
                     position_only_base_recovery=[r for r in recovery_summary(grouped,cfg,'xy_only')
                                                  if r['parameter']=='fixed_lookahead' and r['noise_xy_m']>0],
                     desired_vector_fixture_cases=len(fixtures),

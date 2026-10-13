@@ -14,7 +14,7 @@ from omnidirectional_dwvp.paths import straight_path, arc_path, straight_arc_pat
 from omnidirectional_dwvp.simulation import Result, simulate
 from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
 from omnidirectional_dwvp.access_v3_metrics import fitted_time_constant, extra_metrics, reference_arclength
-from omnidirectional_dwvp.access_v3_outputs import recovery_summary, yaw_ratios
+from omnidirectional_dwvp.access_v3_outputs import noise_summary, noise_travel_figure, recovery_summary, yaw_ratios
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -171,7 +171,7 @@ def test_v3_grid_and_noise_seeds():
     cfg,settings=profile()
     rows=plan_conditions(cfg,settings,0,selected_studies('all'))
     counts={test:sum(c['test']==test for c in rows) for test in selected_studies('all')}
-    assert counts==dict(test1=30,test2=30,test3=132,test4=4,test5=4024)
+    assert counts==dict(test1=30,test2=30,test3=132,test4=4,test5=5624)
     assert not any(c['method']=='vp_scaled_accel' for c in rows)
     for c in rows:
         if c['test'] in ('test3','test4'):
@@ -181,10 +181,10 @@ def test_v3_grid_and_noise_seeds():
     for c in noise:
         key=json.dumps({k:v for k,v in c.items() if k!='seed'},sort_keys=True)
         groups.setdefault(key,[]).append(c['seed'])
-    assert len(groups)==200
+    assert len(groups)==280
     assert all(v==list(range(20)) for v in groups.values())
     decomposition=[c for c in noise if bool(c['config']['noise_xy']) != bool(c['config']['noise_yaw'])]
-    assert len(decomposition)==1600
+    assert len(decomposition)==2880
     response_rows=[c for c in decomposition if c['parameter']=='response_distance']
     assert len(response_rows)==960
     assert all(c['method']=='dwvp' and c['config']['fixed_lookahead']==.11 for c in response_rows)
@@ -200,6 +200,103 @@ def test_v3_grid_and_noise_seeds():
         subset=[c for c in base_rows if c['config']['noise_xy']==xy]
         assert len(subset)==160
         assert {c['config']['fixed_lookahead'] for c in subset}=={.055,.08,.11,.165,.22,.33,.44,.60}
+
+
+def test_fixed_response_lookahead_grid_includes_paired_zero_noise():
+    from collections import Counter
+    cfg, settings = profile()
+    rows = [c for c in plan_conditions(cfg, settings, 7, ('test5',))
+            if c['parameter']=='fixed_lookahead_at_response']
+    assert len(rows)==1600
+    assert Counter((c['value'], c['config']['response_distance'], c['config']['noise_xy'], c['seed'])
+                   for c in rows)==Counter((look, response, xy, seed)
+                                          for look in (.055,.08,.11,.165,.22,.33,.44,.60)
+                                          for response in (.165,.33) for xy in (0.,.002,.005,.01,.02)
+                                          for seed in range(7,27))
+    assert all(c['test']=='test5' and c['part']=='b' and c['method']=='dwvp'
+               and c['scenario']==dict(name='offset',kind='offset',offset=.5)
+               and c['config']['fixed_lookahead']==c['value'] and c['config']['noise_yaw']==0 for c in rows)
+    assert {c['config']['response_distance']/cfg.translation_speed for c in rows}=={.75,1.5}
+
+
+def test_noise_summary_separates_responses_at_same_lookahead():
+    base = dict(test='test5', part='b', scenario='offset', method='dwvp',
+                parameter='fixed_lookahead_at_response', value=.11, fixed_lookahead_m=.11,
+                noise_xy_m=.002, noise_yaw_deg=0., success=True, status='success')
+    rows = [dict(base, response_distance_m=response, tau_y_s=response/.22, seed=seed,
+                 travel_time_s=time, eval_position_error_integral_m_s=integral)
+            for response, seed, time, integral in ((.165,0,20.,.4),(.165,1,22.,.6),(.33,0,30.,.8),(.33,1,34.,1.))]
+    grouped = noise_summary(rows)
+    assert [r['n'] for r in grouped]==[2,2]
+    assert [r['travel_time_s_mean'] for r in grouped]==[21.,32.]
+    np.testing.assert_allclose([r['travel_time_s_std'] for r in grouped], [2**.5, 8**.5])
+    np.testing.assert_allclose([r['eval_position_error_integral_m_s_mean'] for r in grouped], [.5,.9])
+
+
+@pytest.mark.parametrize('component,parameter', [('xy_only','response_distance'), ('xy_only','fixed_lookahead'),
+                                               ('combined','response_distance'), ('combined','fixed_lookahead'),
+                                               ('yaw_only','response_distance')])
+def test_noise_figure_axes_and_series(tmp_path, monkeypatch, component, parameter):
+    import matplotlib.pyplot as plt
+    from omnidirectional_dwvp import access_v3_outputs as outputs
+    cfg, _ = profile()
+    grouped = []
+    levels = [(0.,0.),(.002,0.),(.005,0.),(.01,0.),(.02,0.),(.002,.1),(0.,.1)]
+    for xy,yaw in levels:
+        for kind, values, responses in [('response_distance', [None,.165,.33], [None]),
+                                       ('fixed_lookahead', [.055,.11,.6], [None]),
+                                       ('fixed_lookahead_at_response', [.055,.11,.6], [.165,.33])]:
+            for value in values:
+                for response in responses:
+                    distance = value if kind=='response_distance' else response
+                    grouped.append(dict(scenario='offset', parameter=kind, value=value, response_distance_m=distance,
+                                        tau_y_s=(distance or .11)/cfg.translation_speed, noise_xy_m=xy, noise_yaw_deg=yaw,
+                                        travel_time_s_mean=20+100*xy+(distance or 0), travel_time_s_std=.1,
+                                        eval_position_error_integral_m_s_mean=.5+xy+(distance or 0)))
+    saved = []
+    monkeypatch.setattr(outputs, 'save', lambda fig, stem: saved.append((fig, stem)))
+    noise_travel_figure(tmp_path, grouped, cfg, parameter, component)
+    fig, stem = saved[0]
+    try:
+        np.testing.assert_allclose(fig.get_size_inches(), [3.3,2.3])
+        response = parameter=='response_distance'
+        assert stem.name=='test5_noise_travel_time_vs_'+('response' if response else 'lookahead')+('' if component=='combined' else '_'+component)
+        ax = fig.axes[0]
+        assert ax.get_xlabel()==(r'$\tau_y$ [s]' if response else r'$L$ [m]' if component=='xy_only' else 'Lookahead distance [m]')
+        assert ax.get_ylabel()==(r'$T_m$ [s]' if component=='xy_only' else 'Mean travel time [s]')
+        travel = [line for line in ax.lines if line.get_marker()=='o']
+        if component=='xy_only' and response:
+            assert len(fig.axes)==3
+            right = fig.axes[2]
+            assert right.get_ylabel()==r'$I_p$ [m$\cdot$s]'
+            assert len(right.lines)==len(travel)==5
+            for (xy,_), left, integral in zip(levels[:5], travel, right.lines):
+                assert left.get_linestyle()=='-'
+                assert integral.get_linestyle()=='--' and integral.get_marker()=='None'
+                assert integral.get_color()==left.get_color() and integral.get_linewidth()<left.get_linewidth()
+                np.testing.assert_allclose(integral.get_xdata(), [.75,1.5])
+                np.testing.assert_allclose(integral.get_ydata(), [.665+xy,.83+xy])
+            assert len(ax.get_legend().get_texts())==5
+            assert len([line for line in fig.axes[1].lines if line.get_marker()=='o'])==5
+        elif component=='xy_only':
+            assert len(fig.axes)==1 and len(travel)==8
+            for xy, base, fixed in zip((.002,.005,.01,.02), travel[::2], travel[1::2]):
+                assert base.get_linestyle()=='--' and fixed.get_linestyle()=='-'
+                assert base.get_color()==fixed.get_color()
+                np.testing.assert_allclose(fixed.get_ydata(orig=False), [20+100*xy+.165]*3)
+                np.testing.assert_allclose(fixed.get_xdata(orig=False), [.055,.11,.6])
+            labels = [t.get_text() for t in ax.get_legend().get_texts()]
+            assert len(labels)==6
+            assert labels[-2:]==[r'EC-DWVP ($\tau_y=0.75$ s)', r"base ($\tau_y=L'/v_{\mathrm{des}}$)"]
+        else:
+            assert len(fig.axes)==(2 if response else 1) and len(travel)==2
+            assert all(line.get_linestyle()=='-' for line in travel)
+        dotted = [line for line in ax.lines if line.get_linestyle()==':']
+        noisy_xy = [.002,.005,.01,.02] if component=='xy_only' else [.002] if component=='combined' else []
+        np.testing.assert_allclose([line.get_xdata()[0] for line in dotted],
+                                   [outputs.noise_lookahead_estimate(cfg, xy)/(cfg.translation_speed if response else 1) for xy in noisy_xy])
+    finally:
+        plt.close(fig)
 
 
 def test_arc_path_limits_and_endpoint():

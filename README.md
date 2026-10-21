@@ -381,6 +381,8 @@ The saved results of this configuration are in `results/access_v2/`.
 
 Figures require installed Times New Roman, use STIX math and PDF font type 42,
 7–8 pt text, English axes, one panel per file and separate horizontal legends.
+On Ubuntu, install the font with `sudo apt-get install ttf-mscorefonts-installer`
+before generating figures or running the tests.
 No title is drawn inside panels. Fixed-preview test1 runs can overlay the ideal
 omni orbit and linear PP curve when the initial error is smaller than preview;
 the nominal adaptive-preview figures do not overlay fixed-distance theory.

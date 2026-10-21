@@ -7,6 +7,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install publication figure fonts
+        run: |
+          echo 'ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true' | sudo debconf-set-selections
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

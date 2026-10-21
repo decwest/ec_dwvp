@@ -121,10 +121,11 @@ def test_fixture_roundtrip():
                    min_orientation_time=case['min_orientation_time'])
         pose,path=np.array(case['pose']),np.array(case['path'])
         target,_,nearest,goal=preview_target(pose,np.zeros(3),path,cfg)
-        np.testing.assert_array_equal(target,case['target'])
+        # Stored fixtures allow floating-point roundoff across runtime environments.
+        np.testing.assert_allclose(target,case['target'],rtol=0,atol=1e-12)
         assert bool(goal)==case['goal_region'] and nearest==case['nearest_pose']
         desired,rule=desired_vector(pose,target,cfg,path,goal_region=goal,return_rule=True)
-        np.testing.assert_array_equal(desired,case['expected_desired_vector'])
+        np.testing.assert_allclose(desired,case['expected_desired_vector'],rtol=0,atol=1e-12)
         assert rule==case['response_rule']
 
 

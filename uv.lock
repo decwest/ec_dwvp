@@ -951,7 +951,7 @@ wheels = [
 ]
 
 [[package]]
-name = "omnidirectional-dwvp"
+name = "ec-dwvp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -11,13 +11,13 @@ import types
 
 import numpy as np
 
-from omnidirectional_dwvp.access_report import lookahead_ranges, report
-from omnidirectional_dwvp.access_studies import atomic_json, reuse_key
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import compute_command
-from omnidirectional_dwvp.geometry import Obstacle
-from omnidirectional_dwvp.paths import orientation_ramp_path, straight_path
-from omnidirectional_dwvp.studies import code_hash, write_csv
+from ec_dwvp.access_report import lookahead_ranges, report
+from ec_dwvp.access_studies import atomic_json, reuse_key
+from ec_dwvp.config import Config
+from ec_dwvp.controller import compute_command
+from ec_dwvp.geometry import Obstacle
+from ec_dwvp.paths import orientation_ramp_path, straight_path
+from ec_dwvp.studies import code_hash, write_csv
 
 
 def digest(path):
@@ -31,9 +31,9 @@ def equal(left, right):
 
 def controller_regression(snapshot):
     """Compare every command field to the entry-state implementation."""
-    before = types.ModuleType('omnidirectional_dwvp._before_followup')
-    before.__package__ = 'omnidirectional_dwvp'
-    source = snapshot/'src/omnidirectional_dwvp/controller.py'
+    before = types.ModuleType('ec_dwvp._before_followup')
+    before.__package__ = 'ec_dwvp'
+    source = snapshot/'src/ec_dwvp/controller.py'
     exec(compile(source.read_text(), str(source), 'exec'), before.__dict__)
     rng = np.random.default_rng(20261006)
     checks = 0

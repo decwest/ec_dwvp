@@ -4,11 +4,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 from scipy.optimize import minimize_scalar
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import desired_vector, dynamic_box, regulated_box, ray_command, compute_command
-from omnidirectional_dwvp.geometry import integrate, Obstacle, swept_clearance
-from omnidirectional_dwvp.paths import make_paths
-from omnidirectional_dwvp.simulation import simulate
+from ec_dwvp.config import Config
+from ec_dwvp.controller import desired_vector, dynamic_box, regulated_box, ray_command, compute_command
+from ec_dwvp.geometry import integrate, Obstacle, swept_clearance
+from ec_dwvp.paths import make_paths
+from ec_dwvp.simulation import simulate
 
 
 def test_projection_against_independent_numerical_oracle():
@@ -132,7 +132,7 @@ def test_shared_plugin_fixtures():
 
 
 def test_segment_projection_and_yaw_share_same_location():
-    from omnidirectional_dwvp.metrics import project_reference
+    from ec_dwvp.metrics import project_reference
     path=np.array([[0.,0.,0.],[2.,0.,np.pi/2]])
     poses=np.array([[.5,.2,np.pi/8],[1.,-.3,np.pi/4]])
     reference,error,yaw_error,segment,fraction=project_reference(poses,path)
@@ -144,7 +144,7 @@ def test_segment_projection_and_yaw_share_same_location():
 
 
 def test_segment_yaw_wrap_and_duplicate_points():
-    from omnidirectional_dwvp.metrics import project_reference
+    from ec_dwvp.metrics import project_reference
     path=np.array([[0.,0.,np.deg2rad(170.)],[2.,0.,np.deg2rad(-170.)]])
     poses=np.array([[1.,.1,np.pi]])
     reference,error,yaw_error,_,_=project_reference(poses,path)
@@ -155,7 +155,7 @@ def test_segment_yaw_wrap_and_duplicate_points():
 
 
 def test_cached_trial_reuses_only_identical_specification(tmp_path,monkeypatch):
-    from omnidirectional_dwvp import studies
+    from ec_dwvp import studies
     c=replace(Config(),timeout=.1)
     path=make_paths()['constant_heading_corner']
     first,_,_=studies.run_trial(tmp_path,'p',path,'dwvp',c)
@@ -168,7 +168,7 @@ def test_cached_trial_reuses_only_identical_specification(tmp_path,monkeypatch):
 
 
 def test_sweep_axes_include_both_controllers(tmp_path,monkeypatch):
-    from omnidirectional_dwvp import plotting
+    from ec_dwvp import plotting
     import matplotlib.pyplot as plt
     inspected=[]
     def inspect_figure(fig,stem):

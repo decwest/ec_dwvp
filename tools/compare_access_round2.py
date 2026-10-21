@@ -6,9 +6,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from omnidirectional_dwvp.access_report import report
-from omnidirectional_dwvp.access_studies import atomic_json, reuse_key
-from omnidirectional_dwvp.studies import code_hash, write_csv
+from ec_dwvp.access_report import report
+from ec_dwvp.access_studies import atomic_json, reuse_key
+from ec_dwvp.studies import code_hash, write_csv
 
 
 def digest(path):

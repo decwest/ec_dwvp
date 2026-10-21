@@ -6,15 +6,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 import yaml
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import desired_vector, preview_target, compute_command, response_direction
-from omnidirectional_dwvp.geometry import wrap
-from omnidirectional_dwvp.metrics import project_reference, signed_lateral_errors
-from omnidirectional_dwvp.paths import straight_path, arc_path, straight_arc_path, straight_arc_bounds
-from omnidirectional_dwvp.simulation import Result, simulate
-from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
-from omnidirectional_dwvp.access_v3_metrics import fitted_time_constant, extra_metrics, reference_arclength
-from omnidirectional_dwvp.access_v3_outputs import noise_summary, noise_travel_figure, recovery_summary, yaw_ratios
+from ec_dwvp.config import Config
+from ec_dwvp.controller import desired_vector, preview_target, compute_command, response_direction
+from ec_dwvp.geometry import wrap
+from ec_dwvp.metrics import project_reference, signed_lateral_errors
+from ec_dwvp.paths import straight_path, arc_path, straight_arc_path, straight_arc_bounds
+from ec_dwvp.simulation import Result, simulate
+from ec_dwvp.access_v3 import plan_conditions, selected_studies
+from ec_dwvp.access_v3_metrics import fitted_time_constant, extra_metrics, reference_arclength
+from ec_dwvp.access_v3_outputs import noise_summary, noise_travel_figure, recovery_summary, yaw_ratios
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -244,7 +244,7 @@ def test_noise_summary_separates_responses_at_same_lookahead():
                                                ('yaw_only','response_distance')])
 def test_noise_figure_axes_and_series(tmp_path, monkeypatch, component, parameter):
     import matplotlib.pyplot as plt
-    from omnidirectional_dwvp import access_v3_outputs as outputs
+    from ec_dwvp import access_v3_outputs as outputs
     cfg, _ = profile()
     grouped = []
     levels = [(0.,0.),(.002,0.),(.005,0.),(.01,0.),(.02,0.),(.002,.1),(0.,.1)]
@@ -307,7 +307,7 @@ def test_noise_figure_axes_and_series(tmp_path, monkeypatch, component, paramete
 
 def test_response_panels_symbols_legends_and_arc_inset(tmp_path, monkeypatch):
     import matplotlib.pyplot as plt
-    from omnidirectional_dwvp import access_v3_outputs as outputs
+    from ec_dwvp import access_v3_outputs as outputs
     cfg, settings = profile()
     rows = []
     for c in plan_conditions(cfg, settings, 0, ('test1', 'test2')):

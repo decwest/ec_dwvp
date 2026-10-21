@@ -8,11 +8,11 @@ from pathlib import Path
 import subprocess
 from time import perf_counter
 import numpy as np
-from omnidirectional_dwvp.access_studies import numerical_hash, plan_conditions, selected_studies
-from omnidirectional_dwvp.access_metrics import COMMON_METRICS, aggregate
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.geometry import wrap
-from omnidirectional_dwvp.studies import ROOT, code_hash, sha
+from ec_dwvp.access_studies import numerical_hash, plan_conditions, selected_studies
+from ec_dwvp.access_metrics import COMMON_METRICS, aggregate
+from ec_dwvp.config import Config
+from ec_dwvp.geometry import wrap
+from ec_dwvp.studies import ROOT, code_hash, sha
 
 
 def validate_grid_refresh(root, manifest):
@@ -404,14 +404,14 @@ def validate_full_run(root, manifest):
     for filename in audit['regenerated_files']:
         assert (root/filename).is_file(),filename
     # Verify the generated old/new tables against both manifests.
-    from omnidirectional_dwvp.access_comparison import comparison_lines
+    from ec_dwvp.access_comparison import comparison_lines
     expected='\n'.join(comparison_lines(root,[t['summary'] for t in manifest['trials']],manifest)).strip()
     assert expected in (root/'REPORT.md').read_text()
     return audit
 
 
 def validate_goal_and_settling(a,row,spec):
-    from omnidirectional_dwvp.controller import terminal_heading
+    from ec_dwvp.controller import terminal_heading
     cfg=Config(**spec['config'])
     goal_yaw=terminal_heading(a['path']) if spec['method'] in ('dwpp','rpp') else a['path'][-1,2]
     within=(np.linalg.norm(a['poses'][:,:2]-a['path'][-1,:2],axis=1)<=cfg.goal_xy)

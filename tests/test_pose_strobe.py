@@ -8,8 +8,8 @@ from matplotlib.colors import to_rgba
 from matplotlib.patches import Circle
 import numpy as np
 
-from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS
-from omnidirectional_dwvp.access_studies import numerical_hash
+from ec_dwvp.access_plotting import COLORS, HEADING_METHODS
+from ec_dwvp.access_studies import numerical_hash
 
 
 def test_pose_strobe_generation(tmp_path, monkeypatch):

@@ -22,9 +22,12 @@ Implement the following sequence in a C++ port; `fixtures/desired_vector_cases.j
 7. **Compute the angular demand without modification.** Start with `T=min_orientation_time`. When `speed>1e-12`, set `T=max(T,orientation_time_weight*distance/speed)`, using the actual preview-target distance from step 2, not the chord length or `D_y`. The angular demand is `wrap(target.yaw-pose.yaw)/T`, with wrap in `[-pi,pi)`.
 8. **Select the command and apply terminal control.** Use the existing regulated dynamic window and the selected method. Within the position goal tolerance, the existing terminal law replaces the entire demand; its `response_rule` is null. `Command.response_rule` is also null for the differential-drive references. The goal **preview** region and the terminal **control** region are distinct.
 
-## Sampled-path correction to the brief
+## Sampled-path handling
 
-The brief assumes that selecting the nearest preview pose makes the chord vanish when `|e| >= L`. A nearest vertex generally differs from the continuous closest-segment projection. Its short chord can point backward and alternate direction every cycle. With the literal `L_prime<1e-9` fallback alone, the requested straight-path cases at `L=0.11` and `D_y=0.165,0.33` took 76.267 and 93.500 s, with no fitting samples before 20 s. The additional nearest-target tangent case implements the intended absence of a forward preview segment; it preserves the chosen target and angular calculation. This correction applies only to the non-null branch and is covered by the parity fixture and unit tests.
+A nearest path vertex can differ from the closest-segment projection. Its short
+chord can point backward, so a preview that selects the nearest target uses the
+segment tangent. The selected target and angular calculation are retained.
+Parity fixtures and unit tests cover this fallback.
 
 ## Compensation identity and endpoint qualification
 

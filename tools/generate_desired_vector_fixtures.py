@@ -3,9 +3,9 @@ import json
 import math
 from pathlib import Path
 import numpy as np
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import desired_vector, preview_target
-from omnidirectional_dwvp.paths import straight_path, arc_path
+from ec_dwvp.config import Config
+from ec_dwvp.controller import desired_vector, preview_target
+from ec_dwvp.paths import straight_path, arc_path
 
 
 def generate():

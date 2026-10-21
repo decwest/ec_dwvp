@@ -1,4 +1,4 @@
-"""Omnidirectional path tracking and reproducible DWVP studies."""
+"""Error-Compensated Dynamic Window Vector Pursuit simulation tools."""
 from .config import Config
 from .simulation import simulate
 

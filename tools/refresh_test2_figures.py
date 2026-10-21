@@ -7,10 +7,10 @@ from pathlib import Path
 import shutil
 from tempfile import TemporaryDirectory
 
-from omnidirectional_dwvp.access_plotting import HEADING_METHODS, figures, panel
-from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.studies import ROOT, code_hash
+from ec_dwvp.access_plotting import HEADING_METHODS, figures, panel
+from ec_dwvp.access_studies import atomic_json, numerical_hash
+from ec_dwvp.config import Config
+from ec_dwvp.studies import ROOT, code_hash
 
 
 def archived_acceleration_figures(output, rows, existing):

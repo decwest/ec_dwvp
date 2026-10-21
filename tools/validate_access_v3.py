@@ -7,17 +7,17 @@ import json
 from pathlib import Path
 from time import perf_counter
 import numpy as np
-from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
-from omnidirectional_dwvp.access_v3 import plan_conditions, selected_studies
-from omnidirectional_dwvp.access_v3_metrics import extra_metrics
-from omnidirectional_dwvp.access_v3_outputs import NOISE_KEYS, noise_summary, recovery_summary, yaw_ratios, parity, report
-from omnidirectional_dwvp.access_metrics import evaluate
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import compute_command, preview_target, desired_vector
-from omnidirectional_dwvp.geometry import Obstacle
-from omnidirectional_dwvp.metrics import project_reference, signed_lateral_errors
-from omnidirectional_dwvp.simulation import Result
-from omnidirectional_dwvp.studies import ROOT, code_hash, sha
+from ec_dwvp.access_studies import atomic_json, numerical_hash
+from ec_dwvp.access_v3 import plan_conditions, selected_studies
+from ec_dwvp.access_v3_metrics import extra_metrics
+from ec_dwvp.access_v3_outputs import NOISE_KEYS, noise_summary, recovery_summary, yaw_ratios, parity, report
+from ec_dwvp.access_metrics import evaluate
+from ec_dwvp.config import Config
+from ec_dwvp.controller import compute_command, preview_target, desired_vector
+from ec_dwvp.geometry import Obstacle
+from ec_dwvp.metrics import project_reference, signed_lateral_errors
+from ec_dwvp.simulation import Result
+from ec_dwvp.studies import ROOT, code_hash, sha
 from validate_access_v2 import validate_goal_and_settling
 
 

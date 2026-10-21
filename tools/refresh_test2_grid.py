@@ -7,12 +7,12 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from omnidirectional_dwvp.access_metrics import aggregate
-from omnidirectional_dwvp.access_plotting import figures
-from omnidirectional_dwvp.access_report import report
-from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash, plan_conditions
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.studies import ROOT, code_hash, sha, write_csv
+from ec_dwvp.access_metrics import aggregate
+from ec_dwvp.access_plotting import figures
+from ec_dwvp.access_report import report
+from ec_dwvp.access_studies import atomic_json, numerical_hash, plan_conditions
+from ec_dwvp.config import Config
+from ec_dwvp.studies import ROOT, code_hash, sha, write_csv
 
 
 def digest(path):
@@ -23,8 +23,8 @@ def snapshot(root, baseline):
     baseline.mkdir(parents=True)
     shutil.copyfile(root/'manifest.json', baseline/'manifest.json')
     paths = list((ROOT/'results/paper').rglob('*'))
-    paths += [ROOT/p for p in ('src/omnidirectional_dwvp/solver.py', 'fixtures/solver_cases.json',
-                              'src/omnidirectional_dwvp/controller.py', 'src/omnidirectional_dwvp/simulation.py',
+    paths += [ROOT/p for p in ('src/ec_dwvp/solver.py', 'fixtures/solver_cases.json',
+                              'src/ec_dwvp/controller.py', 'src/ec_dwvp/simulation.py',
                               'configs/access_v2.yaml', 'uv.lock')]
     paths += list((root/'trials').glob('*/trajectory.npz')) + list((root/'trials').glob('*/trial.json'))
     paths += [p for p in root.glob('*') if p.is_file() and p.name.startswith(('comment_round2', 'metrics_alignment'))]

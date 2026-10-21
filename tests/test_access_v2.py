@@ -5,15 +5,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 import yaml
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.controller import desired_vector, compute_command
-from omnidirectional_dwvp.dwpp import optimal_velocity_in_window
-from omnidirectional_dwvp.paths import straight_path, orientation_ramp_path
-from omnidirectional_dwvp.simulation import simulate
-from omnidirectional_dwvp.metrics import project_reference
-from omnidirectional_dwvp.access_metrics import aggregate, evaluate, time_error_metrics, heading_braking_prediction
-from omnidirectional_dwvp.access_studies import plan_conditions, execute_trial, numerical_hash, selected_studies
-from omnidirectional_dwvp.access_noise import noise_lookahead_estimate, travel_time_recovery
+from ec_dwvp.config import Config
+from ec_dwvp.controller import desired_vector, compute_command
+from ec_dwvp.dwpp import optimal_velocity_in_window
+from ec_dwvp.paths import straight_path, orientation_ramp_path
+from ec_dwvp.simulation import simulate
+from ec_dwvp.metrics import project_reference
+from ec_dwvp.access_metrics import aggregate, evaluate, time_error_metrics, heading_braking_prediction
+from ec_dwvp.access_studies import plan_conditions, execute_trial, numerical_hash, selected_studies
+from ec_dwvp.access_noise import noise_lookahead_estimate, travel_time_recovery
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -180,7 +180,7 @@ def test_noise_recovery_uses_paired_zero_noise_baseline_and_all_successes():
 
 
 def test_noise_lookahead_plots_all_levels_and_matching_estimate_lines(tmp_path, monkeypatch):
-    from omnidirectional_dwvp import access_plotting as plotting
+    from ec_dwvp import access_plotting as plotting
     captured={}
     monkeypatch.setattr(plotting,'save',lambda fig,stem:captured.setdefault(stem.name,fig))
     rows=[]
@@ -219,7 +219,7 @@ def test_aggregate_retains_timeout_metrics_and_missing_counts():
 
 
 def test_heading_grid_plots_acceleration_axis_boundary_three_methods_and_post_ramp_times(tmp_path, monkeypatch):
-    from omnidirectional_dwvp import access_plotting as plotting
+    from ec_dwvp import access_plotting as plotting
     profile=yaml.safe_load((ROOT/'configs/access_v2.yaml').read_text())
     settings=profile.pop('study')
     rows=[]
@@ -283,7 +283,7 @@ def test_heading_grid_plots_acceleration_axis_boundary_three_methods_and_post_ra
 
 
 def test_failed_trial_saved_and_cache_identity_includes_initial_pose(tmp_path,monkeypatch):
-    from omnidirectional_dwvp import access_studies
+    from ec_dwvp import access_studies
     profile=yaml.safe_load((ROOT/'configs/access_v2.yaml').read_text());settings=profile.pop('study')
     conditions,_=plan_conditions(Config(**profile),settings,0,('test1',))
     def fail(*args,**kwargs):
@@ -327,7 +327,7 @@ def test_dwvp_always_selects_fastest_point_inside_stopping_distance():
 
 
 def test_dwvp_nonintersection_tie_selects_larger_alpha():
-    from omnidirectional_dwvp.controller import ray_command
+    from ec_dwvp.controller import ray_command
     command,mode=ray_command(np.array([1.,0.,0.]),np.array([.1,.2,0.]),np.array([.3,.4,0.]),True)
     assert mode=='projection'
     np.testing.assert_allclose(command,[.3,.2,0.])
@@ -352,7 +352,7 @@ def test_position_error_uses_path_distance_and_reports_mean():
     ([.4,0.,1.2], [-1.,-1.,-1.], [0.,1.,1.], [0.,0.,0.]),
 ])
 def test_uniform_scaling_handles_asymmetric_and_zero_limits(vector, lower, upper, expected):
-    from omnidirectional_dwvp.controller import uniformly_scale
+    from ec_dwvp.controller import uniformly_scale
     np.testing.assert_allclose(uniformly_scale(np.array(vector), np.array(lower), np.array(upper)), expected)
 
 
@@ -361,7 +361,7 @@ def test_uniform_scaling_handles_asymmetric_and_zero_limits(vector, lower, upper
     ('vp_scaled_accel', [.08666666666666667,-.06,.18]),
 ])
 def test_scaled_command_uses_regulated_velocity_box_before_acceleration(monkeypatch, method, expected):
-    from omnidirectional_dwvp import controller
+    from ec_dwvp import controller
     config=Config(frequency=10.,vx_min=-.2,vx_max=.2,vy_min=-.4,vy_max=.4,ax=.2,ay=.4,aw=.6)
     monkeypatch.setattr(controller,'desired_vector',lambda *args:np.array([.4,-.4,1.2]))
     monkeypatch.setattr(controller,'speed_cap',lambda *args:(config.box_speed*.5,float('inf')))
@@ -373,8 +373,8 @@ def test_scaled_command_uses_regulated_velocity_box_before_acceleration(monkeypa
 
 @pytest.mark.parametrize('method', ['vp_scaled','vp_scaled_accel'])
 def test_scaled_commands_remain_reachable_after_abrupt_regulation_and_at_goal(method):
-    from omnidirectional_dwvp.controller import dynamic_box
-    from omnidirectional_dwvp.geometry import Obstacle
+    from ec_dwvp.controller import dynamic_box
+    from ec_dwvp.geometry import Obstacle
     config=Config(use_cost_regulation=True)
     path=straight_path()
     rng=np.random.default_rng(82)
@@ -451,7 +451,7 @@ def test_saved_brief_overshoot_values_reproduced_by_unchanged_controllers(scale,
 
 
 def test_baseline_comparison_keeps_existing_position_error_and_checks_missing_conditions(tmp_path):
-    from omnidirectional_dwvp.access_report import compare_baseline
+    from ec_dwvp.access_report import compare_baseline
     spec=dict(method='vp',numerical_source_sha256='before')
     summary=dict(test='test1',part='nominal',scenario='offset',method='vp',parameter='',value=None,
                  seed=0,condition_id='existing',trial_id='before',eval_max_position_error_m=.25)
@@ -492,7 +492,7 @@ def test_rpp_pp_curvature_without_curvature_speed_regulation(offset):
 
 
 def test_rpp_cost_and_approach_regulation_and_component_clipping():
-    from omnidirectional_dwvp.geometry import Obstacle
+    from ec_dwvp.geometry import Obstacle
     cfg=Config(use_cost_regulation=True,fixed_lookahead=.11)
     path=straight_path()
     pose=np.array([1.,.05,0.])
@@ -551,7 +551,7 @@ def test_rpp_uses_regulated_x_limit_with_asymmetric_box_and_lower_nominal_cap():
 
 
 def test_constraint_breakdown_counts_overlap_once_and_uses_applied_previous_velocity():
-    from omnidirectional_dwvp.access_metrics import constraint_violation_counts
+    from ec_dwvp.access_metrics import constraint_violation_counts
     cfg=Config()
     previous=np.array([[.22,0.,0.],[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]])
     velocities=np.array([[.221,0.,0.],[.02,0.,0.],[0.,0.,.7],[0.,0.,0.]])
@@ -560,7 +560,7 @@ def test_constraint_breakdown_counts_overlap_once_and_uses_applied_previous_velo
 
 
 def test_saved_trajectory_reuse_rejects_active_cap_and_changed_inputs():
-    from omnidirectional_dwvp.access_studies import reusable_lookahead
+    from ec_dwvp.access_studies import reusable_lookahead
     cfg=Config(lookahead_max=.33)
     new=replace(cfg,lookahead_max=.165)
     assert reusable_lookahead({'lookahead':np.array([.11,.165])},cfg,new)

@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 
 import numpy as np
-from omnidirectional_dwvp.access_plotting import COLORS, HEADING_METHODS, LABELS, style
-from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
-from omnidirectional_dwvp.studies import ROOT
+from ec_dwvp.access_plotting import COLORS, HEADING_METHODS, LABELS, style
+from ec_dwvp.access_studies import atomic_json, numerical_hash
+from ec_dwvp.studies import ROOT
 import matplotlib.pyplot as plt
 
 

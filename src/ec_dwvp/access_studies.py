@@ -26,7 +26,7 @@ def atomic_json(path, value):
 def numerical_hash():
     names = ('config.py', 'controller.py', 'dwpp.py', 'geometry.py', 'solver.py',
              'paths.py', 'simulation.py', 'metrics.py', 'access_metrics.py', 'access_v3_metrics.py')
-    return sha({n: hashlib.sha256((ROOT / 'src/omnidirectional_dwvp' / n).read_bytes()).hexdigest() for n in names})
+    return sha({n: hashlib.sha256((ROOT / 'src/ec_dwvp' / n).read_bytes()).hexdigest() for n in names})
 
 
 def make_condition(test, part, scenario, method, config, seed, settings, parameter='', value=None):

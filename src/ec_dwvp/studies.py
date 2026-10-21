@@ -106,7 +106,7 @@ def execute(study, output, config, seed=0, force=False):
     paths = make_paths()
     output.mkdir(parents=True, exist_ok=True)
     source_hash = code_hash()
-    manifest = dict(schema_version=1, package="omnidirectional-dwvp", source_sha256=source_hash,
+    manifest = dict(schema_version=1, package="ec-dwvp", source_sha256=source_hash,
                     git_revision=git_revision(), python=sys.version.split()[0], numpy=np.__version__,
                     platform=platform.platform(), cpu_model=cpu_model(), seed=seed, config=asdict(config),
                     notes=["Deterministic kinematics; no stochastic noise in canonical studies.",

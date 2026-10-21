@@ -10,13 +10,13 @@ from time import perf_counter
 
 import numpy as np
 
-from omnidirectional_dwvp.access_metrics import aggregate, evaluate
-from omnidirectional_dwvp import access_plotting as plotting
-from omnidirectional_dwvp.access_report import report
-from omnidirectional_dwvp.access_studies import atomic_json, numerical_hash
-from omnidirectional_dwvp.config import Config
-from omnidirectional_dwvp.simulation import Result
-from omnidirectional_dwvp.studies import ROOT, code_hash, sha, write_csv
+from ec_dwvp.access_metrics import aggregate, evaluate
+from ec_dwvp import access_plotting as plotting
+from ec_dwvp.access_report import report
+from ec_dwvp.access_studies import atomic_json, numerical_hash
+from ec_dwvp.config import Config
+from ec_dwvp.simulation import Result
+from ec_dwvp.studies import ROOT, code_hash, sha, write_csv
 from refresh_test2_figures import archived_acceleration_figures
 
 
